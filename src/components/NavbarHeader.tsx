@@ -4,12 +4,16 @@ import { PixelGridLogo } from '@/components/PixelGridLogo';
 import { MintModal } from '@/components/MintModal';
 import '@/styles/gradientBorders.css';
 
-export function NavbarHeader() {
+interface NavbarHeaderProps {
+  onMintClick: () => void;
+}
+
+export function NavbarHeader({ onMintClick }: NavbarHeaderProps) {
   const [showModal, setShowModal] = useState(false);
 
   const handleMintClick = (connected: boolean | undefined) => {
     if (connected === true) {
-      setShowModal(true);
+      onMintClick();
     } else {
       setShowModal(true);
     }
@@ -37,6 +41,7 @@ export function NavbarHeader() {
 
             return (
               <div className="flex items-center space-x-4">
+                <span className="text-[#000] underline">Non-Functional WIP</span><br />
                 <a
                   href="#"
                   onClick={(e) => {
@@ -47,6 +52,7 @@ export function NavbarHeader() {
                 >
                   Mint
                 </a>
+                <br/><span className="text-[#000] underline">Non-Functional WIP</span>
               </div>
             );
           }}

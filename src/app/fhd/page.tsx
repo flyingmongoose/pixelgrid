@@ -5,12 +5,12 @@ import { WagmiProvider, createConfig } from 'wagmi';
 import { base } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import Image from 'next/image';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import { RgbaColorPicker } from 'react-colorful';
 import { NavbarHeader } from '@/components/NavbarHeader';
+import { Footer } from '@/components/layout/Footer';
 
 const config = getDefaultConfig({
   appName: 'PixelGrid',
@@ -21,7 +21,7 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-const CONTRACT_ADDRESS = '0x...' as const; // Replace with your actual contract address on Base mainnet
+const CONTRACT_ADDRESS = '0x4821011E135edcaE76fD2Ff857a45ECa9154a378' as const; // Replace with your actual contract address on Base mainnet
 
 const ABI = [
   parseAbiItem('function totalMintedPixels() view returns (uint256)'),
@@ -61,10 +61,8 @@ function PixelGrid() {
           if (pixelData.result) {
             const result = pixelData.result as bigint;
             
-            // Convert bigint to string, then to a 64-bit binary string
             const binaryStr = result.toString(2).padStart(64, '0');
             
-            // Extract color and position from the binary string
             const colorBinary = binaryStr.slice(0, 32);
             const positionBinary = binaryStr.slice(32);
 
@@ -109,7 +107,12 @@ function PixelGrid() {
   );
 }
 
-function MintModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+interface MintModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function MintModal({ isOpen, onClose }: MintModalProps) {
   const [x, setX] = useState('');
   const [y, setY] = useState('');
   const [color, setColor] = useState({ r: 0, g: 0, b: 0, a: 1 });
@@ -133,7 +136,6 @@ function MintModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement minting logic here
     console.log('Minting pixel:', { x, y, color, ownerMessage });
     onClose();
   };
@@ -187,12 +189,16 @@ export default function FHDPage() {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  const handleMintClick = () => {
+    setIsMintModalOpen(true);
+  };
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <div className="flex flex-col h-screen bg-white">
-            <NavbarHeader onMintClick={() => setIsMintModalOpen(true)} />
+            <NavbarHeader onMintClick={handleMintClick} />
             <main className="flex-grow relative overflow-hidden" ref={containerRef}>
               <TransformWrapper
                 initialScale={initialScale}
@@ -206,20 +212,7 @@ export default function FHDPage() {
                 </TransformComponent>
               </TransformWrapper>
             </main>
-            <footer className="p-4 border-t">
-              <div className="flex flex-col items-center justify-center">
-                <p className="text-sm text-gray-600 mb-2">Developed for</p>
-                <a 
-                  href="https://base.org/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center space-x-2 text-[#0052FF] hover:text-[#0039B3] transition-colors"
-                >
-                  <Image src="/base-logo.svg" alt="Base Logo" width={24} height={24} />
-                  <span className="font-semibold">Base Chain</span>
-                </a>
-              </div>
-            </footer>
+            <Footer />
           </div>
           <MintModal isOpen={isMintModalOpen} onClose={() => setIsMintModalOpen(false)} />
         </RainbowKitProvider>
