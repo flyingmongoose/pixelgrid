@@ -3,6 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PixelGridLogo } from '@/components/PixelGridLogo';
 import { MintModal } from '@/components/MintModal';
 import '@/styles/gradientBorders.css';
+import { base } from 'viem/chains';
 
 interface NavbarHeaderProps {
   onMintClick: () => void;
@@ -11,8 +12,8 @@ interface NavbarHeaderProps {
 export function NavbarHeader({ onMintClick }: NavbarHeaderProps) {
   const [showModal, setShowModal] = useState(false);
 
-  const handleMintClick = (connected: boolean | undefined) => {
-    if (connected === true) {
+  const handleMintClick = (connected: boolean | undefined, chainId: number | undefined) => {
+    if (connected === true && chainId === base.id) {
       onMintClick();
     } else {
       setShowModal(true);
@@ -46,7 +47,7 @@ export function NavbarHeader({ onMintClick }: NavbarHeaderProps) {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleMintClick(connected);
+                    handleMintClick(connected, chain?.id);
                   }}
                   className="font-bold text-[#0052FF] hover:underline transition-all text-[1.7rem]"
                 >
@@ -76,10 +77,10 @@ export function NavbarHeader({ onMintClick }: NavbarHeaderProps) {
               );
             }
 
-            if (chain.unsupported) {
+            if (chain.id !== base.id) {
               return (
                 <button onClick={openChainModal} type="button" className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
-                  Wrong network
+                  Switch to Base
                 </button>
               );
             }
