@@ -15,9 +15,15 @@ export default function Home() {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsAnimating(true);
+    
+    // Trigger the router push halfway through the animation
+    setTimeout(() => {
+      router.push('/fhd');
+    }, ANIMATION_DURATION / 2);
+
+    // Stop the animation after the full duration
     setTimeout(() => {
       setIsAnimating(false);
-      router.push('/fhd');
     }, ANIMATION_DURATION);
   };
 
@@ -123,7 +129,7 @@ function animatePixels(ctx: CanvasRenderingContext2D, pixels: [number, number, n
 
     index = targetIndex;
 
-    if (index < pixels.length) {
+    if (index < pixels.length && elapsedTime < ANIMATION_DURATION) {
       requestAnimationFrame(drawNextPixel);
     }
   }

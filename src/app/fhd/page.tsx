@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
+import React, { useState, useEffect } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Identity, Avatar, Name, Address, EthBalance } from '@coinbase/onchainkit/identity';
 import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { PixelGridLogo } from '@/components/PixelGridLogo';
+import Image from 'next/image';
 
 const config = getDefaultConfig({
   appName: 'PixelGrid',
@@ -28,40 +27,30 @@ export default function FHDPage() {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <OnchainKitProvider apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY || ''} chain={baseSepolia}>
-            <div className="min-h-screen bg-white">
-              <header className="p-4 border-b flex justify-between items-center">
-                <h1 className="text-2xl font-bold">FHD Page</h1>
-                <div className="flex space-x-4">
-                  {mounted && (
-                    <Wallet>
-                      <ConnectWallet>
-                        <Avatar className="h-6 w-6" />
-                        <Name />
-                      </ConnectWallet>
-                      <WalletDropdown>
-                        <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                          <Avatar />
-                          <Name />
-                          <Address />
-                          <EthBalance />
-                        </Identity>
-                        <WalletDropdownLink icon="wallet" href="https://wallet.coinbase.com">
-                          Go to Wallet Dashboard
-                        </WalletDropdownLink>
-                        <WalletDropdownDisconnect />
-                      </WalletDropdown>
-                    </Wallet>
-                  )}
-                  <ConnectButton />
-                </div>
-              </header>
-              <main className="p-4">
-                <h2 className="text-xl mb-4">Welcome to the FHD Page</h2>
-                <p>This page demonstrates the use of OnchainKit and RainbowKit for wallet connection.</p>
-              </main>
-            </div>
-          </OnchainKitProvider>
+          <div className="min-h-screen bg-white flex flex-col">
+            <header className="p-4 border-b flex justify-between items-center">
+              <PixelGridLogo />
+              <ConnectButton />
+            </header>
+            <main className="flex-grow p-4">
+              <h2 className="text-xl mb-4">Welcome to PixelGrid</h2>
+              <p>This page demonstrates the use of RainbowKit for wallet connection.</p>
+            </main>
+            <footer className="p-4 border-t">
+              <div className="flex flex-col items-center justify-center">
+                <p className="text-sm text-gray-600 mb-2">Developed for</p>
+                <a 
+                  href="https://base.org/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center space-x-2 text-[#0052FF] hover:text-[#0039B3] transition-colors"
+                >
+                  <Image src="/base-logo.svg" alt="Base Logo" width={24} height={24} />
+                  <span className="font-semibold">Base Chain</span>
+                </a>
+              </div>
+            </footer>
+          </div>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
