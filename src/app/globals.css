@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(var(--background-end-rgb))
+  ) rgb(var(--background-start-rgb));
+}
+
+.chiseled-text {
+  color: transparent;
+  
+  text-shadow: 
+    1px 1px 0 #ffffff,
+    -1px -1px 0 #a0a0a0,
+    2px 2px 3px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.chiseled-text::before {
+  content: attr(data-text);
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  z-index: -1;
+  color: transparent;
+}
+
+.chiseled-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  z-index: -1;
+  color: #a0a0a0;
+}
+
+@keyframes rotate360 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotate-360 {
+  animation: rotate360 2s linear;
+}
