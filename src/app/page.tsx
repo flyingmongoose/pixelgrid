@@ -15,13 +15,13 @@ export default function Home() {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsAnimating(true);
-    
+  
     // Trigger the router push halfway through the animation
     setTimeout(() => {
       router.push('/fhd');
     }, ANIMATION_DURATION / 2);
-
-    // Stop the animation after the full duration
+  
+    // Continue the animation for its full duration
     setTimeout(() => {
       setIsAnimating(false);
     }, ANIMATION_DURATION);
