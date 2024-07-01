@@ -1,10 +1,9 @@
 import React from 'react';
 import Image from 'next/image';
-import '@/styles/gradientBorders.css';
 
 export function Footer() {
   return (
-    <footer className="p-4 border-t footer-gradient-border">
+    <footer className="p-4 border-t">
       <div className="flex flex-col items-center justify-center">
         <p className='text-sm text-gray-600 mb-2'>0x4821011E135edcaE76fD2Ff857a45ECa9154a378</p>
         <p className="text-sm text-gray-600 mb-2">Developed for</p>

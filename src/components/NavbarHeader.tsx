@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PixelGridLogo } from '@/components/PixelGridLogo';
 import { MintModal } from '@/components/MintModal';
-import '@/styles/gradientBorders.css';
 import { base } from 'viem/chains';
 
 interface NavbarHeaderProps {
@@ -28,7 +27,7 @@ export function NavbarHeader({ onMintClick }: NavbarHeaderProps) {
   };
 
   return (
-    <header className="p-4 border-b flex justify-between items-center navbar-gradient-border">
+<header className="p-4 border-b flex justify-between items-center">
       <PixelGridLogo />
       <div className="flex-grow flex justify-center">
         <ConnectButton.Custom>
