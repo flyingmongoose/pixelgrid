@@ -1,0 +1,59 @@
+@keyframes moveRight {
+  0% { background-position: 0 0; }
+  100% { background-position: 100px 0; }
+}
+
+@keyframes moveLeft {
+  0% { background-position: 100px 0; }
+  100% { background-position: 0 0; }
+}
+
+.navbar-gradient-border {
+  position: relative;
+}
+
+.navbar-gradient-border::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 4px;
+  background-image: linear-gradient(
+    to right,
+    #ff0000 0px, #ff0000 10px,
+    #ff7f00 10px, #ff7f00 20px,
+    #ffff00 20px, #ffff00 30px,
+    #00ff00 30px, #00ff00 40px,
+    #0000ff 40px, #0000ff 50px,
+    #4b0082 50px, #4b0082 60px,
+    #9400d3 60px, #9400d3 70px
+  );
+  background-size: 70px 4px;
+  animation: moveRight 2s linear infinite;
+}
+
+.footer-gradient-border {
+  position: relative;
+}
+
+.footer-gradient-border::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 4px;
+  background-image: linear-gradient(
+    to right,
+    #ff0000 0px, #ff0000 10px,
+    #ff7f00 10px, #ff7f00 20px,
+    #ffff00 20px, #ffff00 30px,
+    #00ff00 30px, #00ff00 40px,
+    #0000ff 40px, #0000ff 50px,
+    #4b0082 50px, #4b0082 60px,
+    #9400d3 60px, #9400d3 70px
+  );
+  background-size: 70px 4px;
+  animation: moveLeft 2s linear infinite;
+}
