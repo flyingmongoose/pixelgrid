@@ -8,7 +8,11 @@ const config: Config = {
     './node_modules/@coinbase/onchainkit/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      textColor: {
+        DEFAULT: 'black',
+      }
+    },
   },
   plugins: [],
 }

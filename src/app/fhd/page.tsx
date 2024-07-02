@@ -8,7 +8,6 @@ import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbiItem } from 'viem';
-import { RgbaColorPicker } from 'react-colorful';
 import { NavbarHeader } from '@/components/NavbarHeader';
 import { Footer } from '@/components/layout/Footer';
 
@@ -21,7 +20,7 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-const CONTRACT_ADDRESS = '0x4821011E135edcaE76fD2Ff857a45ECa9154a378' as const; // Replace with your actual contract address on Base mainnet
+const CONTRACT_ADDRESS = '0x4821011E135edcaE76fD2Ff857a45ECa9154a378' as const;
 
 const ABI = [
   parseAbiItem('function totalMintedPixels() view returns (uint256)'),
@@ -107,69 +106,10 @@ function PixelGrid() {
   );
 }
 
-interface MintModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function MintModal({ isOpen, onClose }: MintModalProps) {
-  const [x, setX] = useState('');
-  const [y, setY] = useState('');
-  const [color, setColor] = useState({ r: 0, g: 0, b: 0, a: 1 });
-  const [ownerMessage, setOwnerMessage] = useState('');
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Minting pixel:', { x, y, color, ownerMessage });
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-4">Mint a Pixel</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <input type="number" placeholder="X Position (0-1920)" value={x} onChange={(e) => setX(e.target.value)} className="border p-2 rounded" min="0" max="1920" required />
-            <input type="number" placeholder="Y Position (0-1080)" value={y} onChange={(e) => setY(e.target.value)} className="border p-2 rounded" min="0" max="1080" required />
-          </div>
-          <div className="mb-4 flex justify-center">
-            <RgbaColorPicker color={color} onChange={setColor} />
-          </div>
-          <textarea placeholder="Message" value={ownerMessage} onChange={(e) => setOwnerMessage(e.target.value)} className="border p-2 rounded w-full mb-4" required></textarea>
-          <div className="flex justify-end">
-            <button type="button" onClick={onClose} className="mr-2 px-4 py-2 bg-[#0052FF] text-white rounded hover:bg-[#0039B3] transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-[#0052FF] text-white rounded hover:bg-[#0039B3] transition-colors">Mint</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function FHDPage() {
   const [mounted, setMounted] = useState(false);
   const [initialScale, setInitialScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isMintModalOpen, setIsMintModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -189,16 +129,12 @@ export default function FHDPage() {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  const handleMintClick = () => {
-    setIsMintModalOpen(true);
-  };
-
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <div className="flex flex-col h-screen bg-white">
-            <NavbarHeader onMintClick={handleMintClick} />
+            <NavbarHeader />
             <main className="flex-grow relative overflow-hidden" ref={containerRef}>
               <TransformWrapper
                 initialScale={initialScale}
@@ -214,7 +150,6 @@ export default function FHDPage() {
             </main>
             <Footer />
           </div>
-          <MintModal isOpen={isMintModalOpen} onClose={() => setIsMintModalOpen(false)} />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
