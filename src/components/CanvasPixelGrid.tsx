@@ -62,7 +62,7 @@ export function CanvasPixelGrid({ dimensions }: CanvasPixelGridProps) {
     });
 
     ctx.restore();
-  }, [pixels, zoom, panOffset, dimensions]);
+  }, [pixels, zoom, panOffset]);
 
   useEffect(() => {
     draw();
