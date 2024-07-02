@@ -10,6 +10,7 @@ import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import { NavbarHeader } from '@/components/NavbarHeader';
 import { Footer } from '@/components/layout/Footer';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
 
 const config = getDefaultConfig({
   appName: 'PixelGrid',
@@ -129,24 +130,39 @@ export default function FHDPage() {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  if (!mounted) return <LoadingOverlay />;
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <div className="flex flex-col h-screen bg-white">
+          <div className="flex flex-col min-h-screen bg-white">
+            {/* Warning Message */}
+            <div className="bg-red-100 border-b-4 border-red-500 text-red-700 px-4 py-3 shadow-md" role="alert">
+              <div className="flex justify-center items-center">
+                <span className="text-3xl mr-2">⚠️</span>
+                <p className="font-bold text-2xl underline">
+                  Non-Functional Work In Progress
+                </p>
+                <span className="text-3xl ml-2">⚠️</span>
+              </div>
+            </div>
+            
             <NavbarHeader />
-            <main className="flex-grow relative overflow-hidden" ref={containerRef}>
-              <TransformWrapper
-                initialScale={initialScale}
-                minScale={initialScale}
-                maxScale={3}
-                centerOnInit={true}
-                panning={{disabled: false}}
-              >
-                <TransformComponent wrapperStyle={{width: '100%', height: '100%'}}>
-                  <PixelGrid />
-                </TransformComponent>
-              </TransformWrapper>
+            <main className="flex-grow relative" ref={containerRef}>
+              <div className="absolute inset-0 overflow-hidden">
+                <TransformWrapper
+                  initialScale={initialScale}
+                  minScale={initialScale}
+                  maxScale={3}
+                  centerOnInit={true}
+                  panning={{disabled: false}}
+                >
+                  <TransformComponent wrapperStyle={{width: '100%', height: '100%'}}>
+                    <PixelGrid />
+                  </TransformComponent>
+                </TransformWrapper>
+              </div>
             </main>
             <Footer />
           </div>
