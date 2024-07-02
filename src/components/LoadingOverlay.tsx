@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { VT323 } from 'next/font/google'
 import { COLORS, LOADING_BOX_SIZE, LOADING_PIXEL_SIZE, LOADING_TOTAL_PIXELS } from '@/constants/styles';
 
@@ -8,29 +8,42 @@ const vt323 = VT323({
 })
 
 export function LoadingOverlay() {
-  const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
-  const [loadingDots, setLoadingDots] = useState('');
   const [filledPixels, setFilledPixels] = useState(0);
+  const [loadingDots, setLoadingDots] = useState('');
+
+  // Memoize the initial pixel array
+  const initialPixels = useMemo(() => Array(LOADING_TOTAL_PIXELS).fill(''), []);
+
+  // Memoize the pixel generation function
+  const generatePixel = useCallback(() => {
+    const emptyIndices = initialPixels.reduce((acc, pixel, index) => {
+      if (pixel === '') acc.push(index);
+      return acc;
+    }, [] as number[]);
+
+    if (emptyIndices.length > 0) {
+      const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+      const newColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      return { index: randomIndex, color: newColor };
+    }
+    return null;
+  }, [initialPixels]);
+
+  // Memoize the pixels state
+  const [pixels, setPixels] = useState(initialPixels);
 
   useEffect(() => {
     const pixelIntervalId = setInterval(() => {
       if (filledPixels < LOADING_TOTAL_PIXELS) {
-        setPixels(prev => {
-          const emptyIndices = prev.reduce((acc, pixel, index) => {
-            if (pixel === '') acc.push(index);
-            return acc;
-          }, [] as number[]);
-
-          if (emptyIndices.length > 0) {
-            const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+        const newPixel = generatePixel();
+        if (newPixel) {
+          setPixels(prev => {
             const newPixels = [...prev];
-            newPixels[randomIndex] = COLORS[Math.floor(Math.random() * COLORS.length)];
+            newPixels[newPixel.index] = newPixel.color;
             return newPixels;
-          }
-          return prev;
-        });
-
-        setFilledPixels(prev => prev + 1);
+          });
+          setFilledPixels(prev => prev + 1);
+        }
       }
     }, 50);
 
@@ -55,22 +68,27 @@ export function LoadingOverlay() {
       clearInterval(pixelIntervalId);
       clearInterval(textIntervalId);
     };
-  }, [filledPixels]);
+  }, [filledPixels, generatePixel]);
+
+  // Memoize the pixel grid
+  const pixelGrid = useMemo(() => (
+    <div 
+      className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
+      style={{
+        gridTemplateColumns: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
+        gridTemplateRows: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
+      }}
+    >
+      {pixels.map((color, index) => (
+        <div key={index} style={{ backgroundColor: color }} />
+      ))}
+    </div>
+  ), [pixels]);
 
   return (
     <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="text-center">
-        <div 
-          className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
-          style={{
-            gridTemplateColumns: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
-            gridTemplateRows: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
-          }}
-        >
-          {pixels.map((color, index) => (
-            <div key={index} style={{ backgroundColor: color }} />
-          ))}
-        </div>
+        {pixelGrid}
         <div className="flex justify-center">
           <p className={`text-black text-2xl text-left ${vt323.className}`} style={{ width: '100px' }}>
             Loading{loadingDots}

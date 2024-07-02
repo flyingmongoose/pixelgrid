@@ -1,10 +1,11 @@
 // src/components/MintModal.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
-import { RgbaColorPicker, RgbaColor } from 'react-colorful';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useChainId, useSwitchChain, useAccount } from 'wagmi';
+import { ColorPicker } from './ColorPicker';
 
 interface MintModalProps {
   isConnected: boolean;
@@ -13,7 +14,46 @@ interface MintModalProps {
   onMint: () => void;
 }
 
-export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalProps) {
+const PositionInput = React.memo(({ label, value, onChange, max }: { label: string; value: string; onChange: (value: string) => void; max: string }) => (
+  <div className="flex flex-col">
+    <label htmlFor={`position-${label.toLowerCase()}`} className="text-sm font-medium text-gray-700 mb-1">
+      {label} Position
+    </label>
+    <input
+      id={`position-${label.toLowerCase()}`}
+      type="number"
+      placeholder={`${label} (0-${max})`}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="border border-gray-300 p-2 rounded-lg w-full"
+      min="0"
+      max={max}
+      required
+    />
+  </div>
+));
+
+PositionInput.displayName = 'PositionInput';
+
+const MessageInput = React.memo(({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
+  <div>
+    <label htmlFor="ownerMessage" className="block text-sm font-medium text-gray-700 mb-1">
+      Message
+    </label>
+    <textarea
+      id="ownerMessage"
+      placeholder="Your message (optional)"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="border border-gray-300 p-2 rounded-lg w-full"
+      rows={3}
+    ></textarea>
+  </div>
+));
+
+MessageInput.displayName = 'MessageInput';
+
+export const MintModal = React.memo(({ isConnected, chainId, onClose, onMint }: MintModalProps) => {
   const [x, setX] = useState('');
   const [y, setY] = useState('');
   const [color, setColor] = useState<RgbaColor>({ r: 0, g: 0, b: 0, a: 1 });
@@ -26,6 +66,11 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
 
   const { switchChain } = useSwitchChain();
   const { isConnected: wagmiIsConnected } = useAccount();
+
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(onClose, 300);
+  }, [onClose]);
 
   useEffect(() => {
     setIsVisible(true);
@@ -88,14 +133,9 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
       document.removeEventListener('mousedown', handleClickOutside);
       observer.disconnect();
     };
-  }, [onClose, modalState]);
+  }, [handleClose, modalState]);
 
-  const handleClose = () => {
-    setIsVisible(false);
-    setTimeout(onClose, 300); // Wait for the animation to finish before closing
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (chainId !== base.id) {
       switchChain({ chainId: base.id });
@@ -104,21 +144,7 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
       onMint();
       handleClose();
     }
-  };
-
-  const handleColorInputChange = (e: React.ChangeEvent<HTMLInputElement>, key: keyof RgbaColor) => {
-    let value = parseFloat(e.target.value);
-    if (key === 'a') {
-      value = Math.min(1, Math.max(0, value));
-    } else {
-      value = Math.min(255, Math.max(0, Math.round(value)));
-    }
-    setColor({ ...color, [key]: value });
-  };
-
-  const colorPreviewStyle = {
-    backgroundColor: `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`,
-  };
+  }, [chainId, switchChain, x, y, color, ownerMessage, onMint, handleClose]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -162,68 +188,11 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                placeholder="X Position (0-1920)"
-                value={x}
-                onChange={(e) => setX(e.target.value)}
-                className="border border-gray-300 p-2 rounded-lg w-full"
-                min="0"
-                max="1920"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Y Position (0-1080)"
-                value={y}
-                onChange={(e) => setY(e.target.value)}
-                className="border border-gray-300 p-2 rounded-lg w-full"
-                min="0"
-                max="1080"
-                required
-              />
+              <PositionInput label="X" value={x} onChange={setX} max="1920" />
+              <PositionInput label="Y" value={y} onChange={setY} max="1080" />
             </div>
-            <div>
-              <div className="w-full mb-4" style={{ height: '200px' }}>
-                <RgbaColorPicker 
-                  color={color} 
-                  onChange={setColor} 
-                  className="w-full h-full"
-                />
-              </div>
-              <div className="flex space-x-2">
-                {['r', 'g', 'b', 'a'].map((key) => (
-                  <input
-                    key={key}
-                    type="number"
-                    value={color[key as keyof RgbaColor]}
-                    onChange={(e) => handleColorInputChange(e, key as keyof RgbaColor)}
-                    className="border border-gray-300 p-1 rounded-lg w-1/4"
-                    min={key === 'a' ? "0" : "0"}
-                    max={key === 'a' ? "1" : "255"}
-                    step={key === 'a' ? "0.01" : "1"}
-                    placeholder={key.toUpperCase()}
-                  />
-                ))}
-              </div>
-              <div 
-                className="w-full h-8 rounded-lg mt-2"
-                style={colorPreviewStyle}
-              ></div>
-            </div>
-            <div>
-              <label htmlFor="ownerMessage" className="block text-sm font-medium text-gray-700 mb-1">
-                Message
-              </label>
-              <textarea
-                id="ownerMessage"
-                placeholder="Your message (optional)"
-                value={ownerMessage}
-                onChange={(e) => setOwnerMessage(e.target.value)}
-                className="border border-gray-300 p-2 rounded-lg w-full"
-                rows={3}
-              ></textarea>
-            </div>
+            <ColorPicker color={color} onChange={setColor} />
+            <MessageInput value={ownerMessage} onChange={setOwnerMessage} />
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
@@ -236,7 +205,7 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
                 type="submit"
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
-                {chainId !== base.id ? 'Switch to Base' : 'Mint'}
+                {chainId !== base.id ? 'Switch to Base' : 'Mint (~$0.01 + Fees)'}
               </button>
             </div>
           </form>
@@ -244,4 +213,6 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
       </div>
     </div>
   );
-}
+});
+
+MintModal.displayName = 'MintModal';
