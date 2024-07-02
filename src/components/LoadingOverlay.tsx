@@ -1,24 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { VT323 } from 'next/font/google'
+import { COLORS, LOADING_BOX_SIZE, LOADING_PIXEL_SIZE, LOADING_TOTAL_PIXELS } from '@/constants/styles';
 
 const vt323 = VT323({ 
   weight: '400',
   subsets: ['latin'],
 })
 
-const COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#8B00FF'];
-const BOX_SIZE = 100;
-const PIXEL_SIZE = 5;
-const TOTAL_PIXELS = (BOX_SIZE / PIXEL_SIZE) ** 2;
-
 export function LoadingOverlay() {
-  const [pixels, setPixels] = useState<string[]>(Array(TOTAL_PIXELS).fill(''));
+  const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
   const [loadingDots, setLoadingDots] = useState('');
   const [filledPixels, setFilledPixels] = useState(0);
 
   useEffect(() => {
     const pixelIntervalId = setInterval(() => {
-      if (filledPixels < TOTAL_PIXELS) {
+      if (filledPixels < LOADING_TOTAL_PIXELS) {
         setPixels(prev => {
           const emptyIndices = prev.reduce((acc, pixel, index) => {
             if (pixel === '') acc.push(index);
@@ -67,8 +63,8 @@ export function LoadingOverlay() {
         <div 
           className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
           style={{
-            gridTemplateColumns: `repeat(${BOX_SIZE / PIXEL_SIZE}, 1fr)`,
-            gridTemplateRows: `repeat(${BOX_SIZE / PIXEL_SIZE}, 1fr)`,
+            gridTemplateColumns: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
+            gridTemplateRows: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
           }}
         >
           {pixels.map((color, index) => (

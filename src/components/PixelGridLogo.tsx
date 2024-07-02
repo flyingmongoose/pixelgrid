@@ -1,13 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
-
-const COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#8B00FF', '#FFFFFF'];
-const PIXEL_SIZE = 3;
-const LETTER_WIDTH = 6;
-const LETTER_HEIGHT = 12;
-const LETTER_SPACING = 2;
-const NARROW_LETTER_SPACING = 3;
-const STROKE_COLOR = '#333333';
+import { 
+  COLORS, 
+  LETTER_PIXEL_SIZE, 
+  LETTER_WIDTH, 
+  LETTER_HEIGHT, 
+  LETTER_SPACING, 
+  NARROW_LETTER_SPACING, 
+  WIDE_LETTER_WIDTH, 
+  NARROW_LETTER_WIDTH, 
+  BORDER_SIZE, 
+  SHADOW_COLOR 
+} from '@/constants/styles';
 
 function generatePixelatedLetter(letter: string) {
   const letterPatterns: { [key: string]: string[] } = {
@@ -128,8 +132,8 @@ function generatePixelatedLetter(letter: string) {
   const pattern = letterPatterns[letter] || [];
   const pixels = [];
 
-  const letterWidth = letter === 'P' || letter === 'G' ? 8 :
-                      letter === 'i' || letter === 'l' ? 2 : LETTER_WIDTH;
+  const letterWidth = letter === 'P' || letter === 'G' ? WIDE_LETTER_WIDTH :
+                      letter === 'i' || letter === 'l' ? NARROW_LETTER_WIDTH : LETTER_WIDTH;
 
   for (let y = 0; y < LETTER_HEIGHT; y++) {
     for (let x = 0; x < letterWidth; x++) {
@@ -140,12 +144,12 @@ function generatePixelatedLetter(letter: string) {
             key={`${x}-${y}`}
             style={{
               position: 'absolute',
-              left: `${x * PIXEL_SIZE}px`,
-              top: `${y * PIXEL_SIZE}px`,
-              width: `${PIXEL_SIZE}px`,
-              height: `${PIXEL_SIZE}px`,
+              left: `${x * LETTER_PIXEL_SIZE}px`,
+              top: `${y * LETTER_PIXEL_SIZE}px`,
+              width: `${LETTER_PIXEL_SIZE}px`,
+              height: `${LETTER_PIXEL_SIZE}px`,
               backgroundColor: color,
-              boxShadow: `0 0 0 1px ${STROKE_COLOR}`,
+              boxShadow: `0 0 0 ${BORDER_SIZE}px ${SHADOW_COLOR}`,
             }}
           />
         );
@@ -167,22 +171,22 @@ export function PixelGridLogo({ className = '', style = {} }: PixelGridLogoProps
       <div 
         className={`flex items-end cursor-pointer ${className}`} 
         style={{ 
-          height: `${LETTER_HEIGHT * PIXEL_SIZE}px`,
+          height: `${LETTER_HEIGHT * LETTER_PIXEL_SIZE}px`,
           ...style 
         }}
       >
         {text.split('').map((letter, index) => {
-          const letterWidth = letter === 'P' || letter === 'G' ? 8 :
-                              letter === 'i' || letter === 'l' ? 2 : LETTER_WIDTH;
+          const letterWidth = letter === 'P' || letter === 'G' ? WIDE_LETTER_WIDTH :
+                              letter === 'i' || letter === 'l' ? NARROW_LETTER_WIDTH : LETTER_WIDTH;
           const spacing = letter === 'i' || letter === 'l' ? NARROW_LETTER_SPACING : LETTER_SPACING;
           return (
             <div
               key={index}
               style={{
                 position: 'relative',
-                width: `${letterWidth * PIXEL_SIZE}px`,
-                height: `${LETTER_HEIGHT * PIXEL_SIZE}px`,
-                marginRight: `${spacing * PIXEL_SIZE}px`,
+                width: `${letterWidth * LETTER_PIXEL_SIZE}px`,
+                height: `${LETTER_HEIGHT * LETTER_PIXEL_SIZE}px`,
+                marginRight: `${spacing * LETTER_PIXEL_SIZE}px`,
               }}
             >
               {generatePixelatedLetter(letter)}

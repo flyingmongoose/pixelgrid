@@ -6,11 +6,12 @@ import { base } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getDefaultConfig, RainbowKitProvider, ConnectButton } from '@rainbow-me/rainbowkit';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { useReadContract, useReadContracts } from 'wagmi';
+import { useReadContract, useReadContracts, useChainId, useSwitchChain } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import { NavbarHeader } from '@/components/NavbarHeader';
 import { Footer } from '@/components/layout/Footer';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { PixelAnimation } from '@/components/PixelAnimation';
 
 const config = getDefaultConfig({
   appName: 'PixelGrid',
@@ -114,6 +115,9 @@ function FHDPageContent() {
   const [isWalletButtonReady, setIsWalletButtonReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+
   const { data: totalMintedPixels, isLoading: isTotalLoading, isError: isTotalError } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -156,6 +160,22 @@ function FHDPageContent() {
       setFadeIn(true);
     }
   }, [isTotalLoading, isPixelsLoading, isTotalError, isPixelsError, isWalletButtonReady]);
+
+  if (chainId !== base.id) {
+    return (
+      <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div className="text-center">
+          <p className="text-2xl mb-4">Please connect to the Base network</p>
+          <button 
+            onClick={() => switchChain({ chainId: base.id })}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Switch to Base
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -3,16 +3,22 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PixelGridLogo } from '@/components/PixelGridLogo';
 import { MintModal } from '@/components/MintModal';
 import { base } from 'viem/chains';
-import { useAccount, useChainId } from 'wagmi';
+import { useAccount, useChainId, useSwitchChain } from 'wagmi';
 
 export function NavbarHeader() {
   const [showMintModal, setShowMintModal] = useState(false);
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
 
   const handleMintClick = useCallback(() => {
-    setShowMintModal(true);
-  }, []);
+    if (chainId !== base.id) {
+      switchChain({ chainId: base.id });
+    } else {
+      setShowMintModal(true);
+    }
+  }, [chainId, switchChain]);
+
 
   const handleCloseMintModal = useCallback(() => {
     setShowMintModal(false);
@@ -31,8 +37,9 @@ export function NavbarHeader() {
         <button
           onClick={handleMintClick}
           className="font-bold text-[#0052FF] hover:underline transition-all text-[1.7rem] bg-transparent border-none cursor-pointer"
+          disabled={!isConnected || chainId !== base.id}
         >
-          Mint Pixel
+          {chainId !== base.id ? 'Switch to Base' : 'Mint Pixel'}
         </button>
       </div>
       <ConnectButton />

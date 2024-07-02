@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RgbaColorPicker, RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useChainId, useSwitchChain } from 'wagmi';
 
 interface MintModalProps {
   isConnected: boolean;
@@ -19,6 +20,9 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
   const [showConnectPrompt, setShowConnectPrompt] = useState(!isConnected || chainId !== base.id);
   const [isRainbowModalOpen, setIsRainbowModalOpen] = useState(false);
   const [connectionConfirmed, setConnectionConfirmed] = useState(false);
+
+  const { switchChain } = useSwitchChain();
+
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -61,9 +65,13 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Minting pixel:', { x, y, color, ownerMessage });
-    onMint();
-    onClose();
+    if (chainId !== base.id) {
+      switchChain({ chainId: base.id });
+    } else {
+      console.log('Minting pixel:', { x, y, color, ownerMessage });
+      onMint();
+      onClose();
+    }
   };
 
   const handleColorInputChange = (e: React.ChangeEvent<HTMLInputElement>, key: keyof RgbaColor) => {
@@ -214,7 +222,7 @@ export function MintModal({ isConnected, chainId, onClose, onMint }: MintModalPr
                 type="submit"
                 className="px-4 py-2 bg-[#0052FF] text-white rounded hover:bg-[#0039B3] transition-colors"
               >
-                Mint
+                {chainId !== base.id ? 'Switch to Base' : 'Mint'}
               </button>
             </div>
           </form>
