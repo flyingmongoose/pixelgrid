@@ -108,13 +108,11 @@ function PixelGrid() {
 }
 
 export default function FHDPage() {
-  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [initialScale, setInitialScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
-
     const updateScale = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.clientWidth;
@@ -127,10 +125,19 @@ export default function FHDPage() {
 
     updateScale();
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+
+    // Simulate loading time (remove this in production and use actual loading logic)
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      clearTimeout(timer);
+    };
   }, []);
 
-  if (!mounted) return <LoadingOverlay />;
+  if (isLoading) {
+    return <LoadingOverlay />;
+  }
 
   return (
     <WagmiProvider config={config}>
