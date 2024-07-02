@@ -116,7 +116,7 @@ function FHDPageContent() {
         </ConnectButton.Custom>
       </div>
       {isLoading ? (
-        <LoadingOverlay />
+        <LoadingOverlay percentage={50} />
       ) : (
         <div className={`flex flex-col min-h-screen bg-white transition-opacity duration-1000 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
           {/* Warning Message */}
