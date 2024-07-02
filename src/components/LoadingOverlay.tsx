@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { VT323 } from 'next/font/google'
+
+const vt323 = VT323({ 
+  weight: '400',
+  subsets: ['latin'],
+})
 
 const COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#8B00FF'];
 const BOX_SIZE = 100;
@@ -47,7 +53,7 @@ export function LoadingOverlay() {
             return '';
         }
       });
-    }, 55); // Cycle every 100ms
+    }, 50);
 
     return () => {
       clearInterval(pixelIntervalId);
@@ -56,7 +62,7 @@ export function LoadingOverlay() {
   }, [filledPixels]);
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="text-center">
         <div 
           className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
@@ -70,7 +76,7 @@ export function LoadingOverlay() {
           ))}
         </div>
         <div className="flex justify-center">
-          <p className="text-white text-2xl font-mono text-left" style={{ width: '120px' }}>
+          <p className={`text-black text-2xl text-left ${vt323.className}`} style={{ width: '100px' }}>
             Loading{loadingDots}
           </p>
         </div>

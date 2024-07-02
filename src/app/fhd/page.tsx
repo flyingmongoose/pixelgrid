@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { WagmiProvider, createConfig } from 'wagmi';
 import { base } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { getDefaultConfig, RainbowKitProvider, ConnectButton } from '@rainbow-me/rainbowkit';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbiItem } from 'viem';
@@ -37,7 +37,7 @@ interface Pixel {
 function PixelGrid() {
   const [pixels, setPixels] = useState<Pixel[]>([]);
 
-  const { data: totalMintedPixels } = useReadContract({
+  const { data: totalMintedPixels, isLoading: isTotalLoading, isError: isTotalError } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'totalMintedPixels',
@@ -45,7 +45,7 @@ function PixelGrid() {
 
   const pixelIndexes = totalMintedPixels ? Array.from({ length: Number(totalMintedPixels) }, (_, i) => i) : [];
 
-  const { data: pixelsData } = useReadContracts({
+  const { data: pixelsData, isLoading: isPixelsLoading, isError: isPixelsError } = useReadContracts({
     contracts: pixelIndexes.map(index => ({
       address: CONTRACT_ADDRESS,
       abi: ABI,
@@ -107,10 +107,29 @@ function PixelGrid() {
   );
 }
 
-export default function FHDPage() {
+function FHDPageContent() {
   const [isLoading, setIsLoading] = useState(true);
+  const [fadeIn, setFadeIn] = useState(false);
   const [initialScale, setInitialScale] = useState(1);
+  const [isWalletButtonReady, setIsWalletButtonReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { data: totalMintedPixels, isLoading: isTotalLoading, isError: isTotalError } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'totalMintedPixels',
+  });
+
+  const pixelIndexes = totalMintedPixels ? Array.from({ length: Number(totalMintedPixels) }, (_, i) => i) : [];
+
+  const { data: pixelsData, isLoading: isPixelsLoading, isError: isPixelsError } = useReadContracts({
+    contracts: pixelIndexes.map(index => ({
+      address: CONTRACT_ADDRESS,
+      abi: ABI,
+      functionName: 'pixels',
+      args: [BigInt(index)],
+    })),
+  });
 
   useEffect(() => {
     const updateScale = () => {
@@ -126,53 +145,104 @@ export default function FHDPage() {
     updateScale();
     window.addEventListener('resize', updateScale);
 
-    // Simulate loading time (remove this in production and use actual loading logic)
-    const timer = setTimeout(() => setIsLoading(false), 3000);
-
     return () => {
       window.removeEventListener('resize', updateScale);
-      clearTimeout(timer);
     };
   }, []);
 
-  if (isLoading) {
-    return <LoadingOverlay />;
-  }
+  useEffect(() => {
+    if (!isTotalLoading && !isPixelsLoading && !isTotalError && !isPixelsError && isWalletButtonReady) {
+      setIsLoading(false);
+      setFadeIn(true);
+    }
+  }, [isTotalLoading, isPixelsLoading, isTotalError, isPixelsError, isWalletButtonReady]);
 
+  return (
+    <>
+      <div className="fixed top-4 right-4 z-50">
+        <ConnectButton.Custom>
+          {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+            const ready = mounted && authenticationStatus !== 'loading';
+            if (ready && !isWalletButtonReady) {
+              setIsWalletButtonReady(true);
+            }
+            return (
+              <div
+                {...(!ready && {
+                  'aria-hidden': true,
+                  'style': {
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  },
+                })}
+              >
+                {(() => {
+                  if (!mounted || !ready) {
+                    return null;
+                  }
+                  if (account && chain) {
+                    return (
+                      <button onClick={openAccountModal} type="button">
+                        {account.displayName}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button onClick={openConnectModal} type="button">
+                      Connect Wallet
+                    </button>
+                  );
+                })()}
+              </div>
+            );
+          }}
+        </ConnectButton.Custom>
+      </div>
+      {isLoading ? (
+        <LoadingOverlay />
+      ) : (
+        <div className={`flex flex-col min-h-screen bg-white transition-opacity duration-1000 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+          {/* Warning Message */}
+          <div className="bg-red-100 border-b-4 border-red-500 text-red-700 px-4 py-3 shadow-md" role="alert">
+            <div className="flex justify-center items-center">
+              <span className="text-3xl mr-2">⚠️</span>
+              <p className="font-bold text-2xl underline" style={{ fontFamily: 'VT323, monospace' }}>
+                Non-Functional Work In Progress
+              </p>
+              <span className="text-3xl ml-2">⚠️</span>
+            </div>
+          </div>
+          
+          <NavbarHeader />
+          <main className="flex-grow relative" ref={containerRef}>
+            <div className="absolute inset-0 overflow-hidden">
+              <TransformWrapper
+                initialScale={initialScale}
+                minScale={initialScale}
+                maxScale={3}
+                centerOnInit={true}
+                panning={{disabled: false}}
+              >
+                <TransformComponent wrapperStyle={{width: '100%', height: '100%'}}>
+                  <PixelGrid />
+                </TransformComponent>
+              </TransformWrapper>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function FHDPage() {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <div className="flex flex-col min-h-screen bg-white">
-            {/* Warning Message */}
-            <div className="bg-red-100 border-b-4 border-red-500 text-red-700 px-4 py-3 shadow-md" role="alert">
-              <div className="flex justify-center items-center">
-                <span className="text-3xl mr-2">⚠️</span>
-                <p className="font-bold text-2xl underline">
-                  Non-Functional Work In Progress
-                </p>
-                <span className="text-3xl ml-2">⚠️</span>
-              </div>
-            </div>
-            
-            <NavbarHeader />
-            <main className="flex-grow relative" ref={containerRef}>
-              <div className="absolute inset-0 overflow-hidden">
-                <TransformWrapper
-                  initialScale={initialScale}
-                  minScale={initialScale}
-                  maxScale={3}
-                  centerOnInit={true}
-                  panning={{disabled: false}}
-                >
-                  <TransformComponent wrapperStyle={{width: '100%', height: '100%'}}>
-                    <PixelGrid />
-                  </TransformComponent>
-                </TransformWrapper>
-              </div>
-            </main>
-            <Footer />
-          </div>
+          <FHDPageContent />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
