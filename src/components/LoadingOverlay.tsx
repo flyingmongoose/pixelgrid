@@ -8,15 +8,15 @@ const vt323 = VT323({
 })
 
 interface LoadingOverlayProps {
-  percentage: number;
+  onLoadingComplete: () => void;
 }
 
-export function LoadingOverlay({ percentage }: LoadingOverlayProps) {
+export function LoadingOverlay({ onLoadingComplete }: LoadingOverlayProps) {
   const [filledPixels, setFilledPixels] = useState(0);
   const [loadingDots, setLoadingDots] = useState('');
   const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
+  const [displayPercentage, setDisplayPercentage] = useState(0);
 
-  // Memoize the pixel generation function
   const generatePixel = useCallback(() => {
     const emptyIndices = pixels.reduce((acc, pixel, index) => {
       if (pixel === '') acc.push(index);
@@ -56,18 +56,32 @@ export function LoadingOverlay({ percentage }: LoadingOverlayProps) {
           default: return '';
         }
       });
+    }, 500);
+
+    const percentageIntervalId = setInterval(() => {
+      setDisplayPercentage(prev => {
+        const actualPercentage = (filledPixels / LOADING_TOTAL_PIXELS) * 100;
+        const newPercentage = Math.min(prev + 1, Math.max(actualPercentage, prev));
+        if (newPercentage >= 100) {
+          clearInterval(percentageIntervalId);
+          clearInterval(pixelIntervalId);
+          clearInterval(textIntervalId);
+          onLoadingComplete();
+        }
+        return newPercentage;
+      });
     }, 50);
 
     return () => {
       clearInterval(pixelIntervalId);
       clearInterval(textIntervalId);
+      clearInterval(percentageIntervalId);
     };
-  }, [filledPixels, generatePixel]);
+  }, [filledPixels, generatePixel, onLoadingComplete]);
 
-  // Memoize the pixel grid
   const pixelGrid = useMemo(() => (
     <div
-      className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
+      className="w-[100px] h-[100px] border-2 border-black mb-0 mx-auto grid"
       style={{
         gridTemplateColumns: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
         gridTemplateRows: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
@@ -79,19 +93,17 @@ export function LoadingOverlay({ percentage }: LoadingOverlayProps) {
     </div>
   ), [pixels]);
 
-  // Memoize the loading text
   const loadingText = useMemo(() => (
     <p className={`text-black text-2xl text-left ${vt323.className}`} style={{ width: '100px' }}>
       Loading{loadingDots}
     </p>
   ), [loadingDots]);
 
-  // Add percentage text
   const percentageText = useMemo(() => (
-    <p className={`text-black text-xl mt-2 ${vt323.className}`}>
-      {Math.round(percentage)}%
+    <p className={`text-black text-xl mt-0 ${vt323.className}`}>
+      {Math.round(displayPercentage)}%
     </p>
-  ), [percentage]);
+  ), [displayPercentage]);
 
   return (
     <div className="fixed inset-0 bg-white flex items-center justify-center z-50">

@@ -15,7 +15,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="p-4 border-t">
+    <footer className="flex-shrink-0 sticky bottom-0 z-50 p-4 border-t bg-white">
       <div className="flex flex-col items-center justify-center">
         <div className="flex items-center mb-2 relative">
           <a
