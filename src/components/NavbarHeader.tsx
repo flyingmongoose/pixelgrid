@@ -1,3 +1,5 @@
+// src/components/NavbarHeader.tsx
+
 import React, { useState, useCallback } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PixelGridLogo } from '@/components/PixelGridLogo';
@@ -12,13 +14,14 @@ export function NavbarHeader() {
   const { switchChain } = useSwitchChain();
 
   const handleMintClick = useCallback(() => {
-    if (chainId !== base.id) {
+    if (!isConnected) {
+      setShowMintModal(true);
+    } else if (chainId !== base.id) {
       switchChain({ chainId: base.id });
     } else {
       setShowMintModal(true);
     }
-  }, [chainId, switchChain]);
-
+  }, [isConnected, chainId, switchChain]);
 
   const handleCloseMintModal = useCallback(() => {
     setShowMintModal(false);
@@ -30,6 +33,7 @@ export function NavbarHeader() {
     setShowMintModal(false);
   };
 
+
   return (
     <header className="p-4 border-b flex justify-between items-center">
       <PixelGridLogo />
@@ -37,9 +41,8 @@ export function NavbarHeader() {
         <button
           onClick={handleMintClick}
           className="font-bold text-[#0052FF] hover:underline transition-all text-[1.7rem] bg-transparent border-none cursor-pointer"
-          disabled={!isConnected || chainId !== base.id}
         >
-          {chainId !== base.id ? 'Switch to Base' : 'Mint Pixel'}
+          Mint Pixel
         </button>
       </div>
       <ConnectButton />

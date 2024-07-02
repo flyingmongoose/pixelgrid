@@ -5,13 +5,12 @@ import { WagmiProvider, createConfig } from 'wagmi';
 import { base } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getDefaultConfig, RainbowKitProvider, ConnectButton } from '@rainbow-me/rainbowkit';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { useReadContract, useReadContracts, useChainId, useSwitchChain } from 'wagmi';
-import { parseAbiItem } from 'viem';
+import { useChainId, useSwitchChain } from 'wagmi';
 import { NavbarHeader } from '@/components/NavbarHeader';
 import { Footer } from '@/components/layout/Footer';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { PixelAnimation } from '@/components/PixelAnimation';
+import { PixelGrid } from '@/components/PixelGrid/PixelGrid';
 
 const config = getDefaultConfig({
   appName: 'PixelGrid',
@@ -22,92 +21,6 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-const CONTRACT_ADDRESS = '0x4821011E135edcaE76fD2Ff857a45ECa9154a378' as const;
-
-const ABI = [
-  parseAbiItem('function totalMintedPixels() view returns (uint256)'),
-  parseAbiItem('function pixels(uint256) view returns (uint32 color, uint32 position, string ownerMessage)'),
-] as const;
-
-interface Pixel {
-  x: number;
-  y: number;
-  color: string;
-}
-
-function PixelGrid() {
-  const [pixels, setPixels] = useState<Pixel[]>([]);
-
-  const { data: totalMintedPixels, isLoading: isTotalLoading, isError: isTotalError } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: ABI,
-    functionName: 'totalMintedPixels',
-  });
-
-  const pixelIndexes = totalMintedPixels ? Array.from({ length: Number(totalMintedPixels) }, (_, i) => i) : [];
-
-  const { data: pixelsData, isLoading: isPixelsLoading, isError: isPixelsError } = useReadContracts({
-    contracts: pixelIndexes.map(index => ({
-      address: CONTRACT_ADDRESS,
-      abi: ABI,
-      functionName: 'pixels',
-      args: [BigInt(index)],
-    })),
-  });
-
-  useEffect(() => {
-    if (pixelsData) {
-      const newPixels: Pixel[] = pixelsData
-        .map((pixelData) => {
-          if (pixelData.result) {
-            const result = pixelData.result as bigint;
-            
-            const binaryStr = result.toString(2).padStart(64, '0');
-            
-            const colorBinary = binaryStr.slice(0, 32);
-            const positionBinary = binaryStr.slice(32);
-
-            const color = parseInt(colorBinary, 2);
-            const position = parseInt(positionBinary, 2);
-
-            const x = (position >> 16) & 0xFFFF;
-            const y = position & 0xFFFF;
-            const r = (color >> 24) & 0xFF;
-            const g = (color >> 16) & 0xFF;
-            const b = (color >> 8) & 0xFF;
-            const a = color & 0xFF;
-            
-            return {
-              x,
-              y,
-              color: `rgba(${r},${g},${b},${a / 255})`,
-            };
-          }
-          return null;
-        })
-        .filter((pixel): pixel is Pixel => pixel !== null);
-
-      setPixels(newPixels);
-    }
-  }, [pixelsData]);
-
-  return (
-    <svg width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet">
-      <rect width="1920" height="1080" fill="#f0f0f0" />
-      {pixels.map((pixel, index) => (
-        <rect
-          key={index}
-          x={pixel.x}
-          y={pixel.y}
-          width="1"
-          height="1"
-          fill={pixel.color}
-        />
-      ))}
-    </svg>
-  );
-}
-
 function FHDPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [fadeIn, setFadeIn] = useState(false);
@@ -117,23 +30,6 @@ function FHDPageContent() {
 
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
-
-  const { data: totalMintedPixels, isLoading: isTotalLoading, isError: isTotalError } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: ABI,
-    functionName: 'totalMintedPixels',
-  });
-
-  const pixelIndexes = totalMintedPixels ? Array.from({ length: Number(totalMintedPixels) }, (_, i) => i) : [];
-
-  const { data: pixelsData, isLoading: isPixelsLoading, isError: isPixelsError } = useReadContracts({
-    contracts: pixelIndexes.map(index => ({
-      address: CONTRACT_ADDRESS,
-      abi: ABI,
-      functionName: 'pixels',
-      args: [BigInt(index)],
-    })),
-  });
 
   useEffect(() => {
     const updateScale = () => {
@@ -155,11 +51,11 @@ function FHDPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!isTotalLoading && !isPixelsLoading && !isTotalError && !isPixelsError && isWalletButtonReady) {
+    if (isWalletButtonReady) {
       setIsLoading(false);
       setFadeIn(true);
     }
-  }, [isTotalLoading, isPixelsLoading, isTotalError, isPixelsError, isWalletButtonReady]);
+  }, [isWalletButtonReady]);
 
   if (chainId !== base.id) {
     return (
@@ -237,17 +133,7 @@ function FHDPageContent() {
           <NavbarHeader />
           <main className="flex-grow relative" ref={containerRef}>
             <div className="absolute inset-0 overflow-hidden">
-              <TransformWrapper
-                initialScale={initialScale}
-                minScale={initialScale}
-                maxScale={3}
-                centerOnInit={true}
-                panning={{disabled: false}}
-              >
-                <TransformComponent wrapperStyle={{width: '100%', height: '100%'}}>
-                  <PixelGrid />
-                </TransformComponent>
-              </TransformWrapper>
+              <PixelGrid />
             </div>
           </main>
           <Footer />
