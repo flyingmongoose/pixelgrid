@@ -156,8 +156,8 @@ export function CanvasPixelGrid({ dimensions }: CanvasPixelGridProps) {
     const scale = Math.min(scaleX, scaleY);
 
     setPanOffset(prev => clampPanOffset({
-      x: prev.x - dx / (scale * zoom),
-      y: prev.y - dy / (scale * zoom)
+      x: prev.x + dx / (scale * zoom),
+      y: prev.y + dy / (scale * zoom)
     }, zoom));
 
     setLastMousePos({ x: event.clientX, y: event.clientY });
