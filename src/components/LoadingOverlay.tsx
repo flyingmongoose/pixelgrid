@@ -10,13 +10,11 @@ const vt323 = VT323({
 export function LoadingOverlay() {
   const [filledPixels, setFilledPixels] = useState(0);
   const [loadingDots, setLoadingDots] = useState('');
-
-  // Memoize the initial pixel array
-  const initialPixels = useMemo(() => Array(LOADING_TOTAL_PIXELS).fill(''), []);
+  const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
 
   // Memoize the pixel generation function
   const generatePixel = useCallback(() => {
-    const emptyIndices = initialPixels.reduce((acc, pixel, index) => {
+    const emptyIndices = pixels.reduce((acc, pixel, index) => {
       if (pixel === '') acc.push(index);
       return acc;
     }, [] as number[]);
@@ -27,10 +25,7 @@ export function LoadingOverlay() {
       return { index: randomIndex, color: newColor };
     }
     return null;
-  }, [initialPixels]);
-
-  // Memoize the pixels state
-  const [pixels, setPixels] = useState(initialPixels);
+  }, [pixels]);
 
   useEffect(() => {
     const pixelIntervalId = setInterval(() => {
@@ -50,16 +45,11 @@ export function LoadingOverlay() {
     const textIntervalId = setInterval(() => {
       setLoadingDots(prev => {
         switch (prev) {
-          case '':
-            return '.';
-          case '.':
-            return '..';
-          case '..':
-            return '...';
-          case '...':
-            return '';
-          default:
-            return '';
+          case '': return '.';
+          case '.': return '..';
+          case '..': return '...';
+          case '...': return '';
+          default: return '';
         }
       });
     }, 50);
@@ -85,14 +75,19 @@ export function LoadingOverlay() {
     </div>
   ), [pixels]);
 
+  // Memoize the loading text
+  const loadingText = useMemo(() => (
+    <p className={`text-black text-2xl text-left ${vt323.className}`} style={{ width: '100px' }}>
+      Loading{loadingDots}
+    </p>
+  ), [loadingDots]);
+
   return (
     <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="text-center">
         {pixelGrid}
         <div className="flex justify-center">
-          <p className={`text-black text-2xl text-left ${vt323.className}`} style={{ width: '100px' }}>
-            Loading{loadingDots}
-          </p>
+          {loadingText}
         </div>
       </div>
     </div>
