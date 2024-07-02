@@ -2,12 +2,16 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { VT323 } from 'next/font/google'
 import { COLORS, LOADING_BOX_SIZE, LOADING_PIXEL_SIZE, LOADING_TOTAL_PIXELS } from '@/constants/styles';
 
-const vt323 = VT323({ 
+const vt323 = VT323({
   weight: '400',
   subsets: ['latin'],
 })
 
-export function LoadingOverlay() {
+interface LoadingOverlayProps {
+  percentage: number;
+}
+
+export function LoadingOverlay({ percentage }: LoadingOverlayProps) {
   const [filledPixels, setFilledPixels] = useState(0);
   const [loadingDots, setLoadingDots] = useState('');
   const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
@@ -62,7 +66,7 @@ export function LoadingOverlay() {
 
   // Memoize the pixel grid
   const pixelGrid = useMemo(() => (
-    <div 
+    <div
       className="w-[100px] h-[100px] border-2 border-black mb-4 mx-auto grid"
       style={{
         gridTemplateColumns: `repeat(${LOADING_BOX_SIZE / LOADING_PIXEL_SIZE}, 1fr)`,
@@ -82,11 +86,19 @@ export function LoadingOverlay() {
     </p>
   ), [loadingDots]);
 
+  // Add percentage text
+  const percentageText = useMemo(() => (
+    <p className={`text-black text-xl mt-2 ${vt323.className}`}>
+      {Math.round(percentage)}%
+    </p>
+  ), [percentage]);
+
   return (
     <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
       <div className="text-center">
         {pixelGrid}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center">
+          {percentageText}
           {loadingText}
         </div>
       </div>

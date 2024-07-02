@@ -12,6 +12,8 @@ interface MintModalProps {
   chainId: number | undefined;
   onClose: () => void;
   onMint: () => void;
+  initialX: string;
+  initialY: string;
 }
 
 const PositionInput = React.memo(({ label, value, onChange, max }: { label: string; value: string; onChange: (value: string) => void; max: string }) => (
@@ -53,9 +55,9 @@ const MessageInput = React.memo(({ value, onChange }: { value: string; onChange:
 
 MessageInput.displayName = 'MessageInput';
 
-export const MintModal = React.memo(({ isConnected, chainId, onClose, onMint }: MintModalProps) => {
-  const [x, setX] = useState('');
-  const [y, setY] = useState('');
+export const MintModal = React.memo(({ isConnected, chainId, onClose, onMint, initialX, initialY }: MintModalProps) => {
+  const [x, setX] = useState(initialX);
+  const [y, setY] = useState(initialY);
   const [color, setColor] = useState<RgbaColor>({ r: 0, g: 0, b: 0, a: 1 });
   const [ownerMessage, setOwnerMessage] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
