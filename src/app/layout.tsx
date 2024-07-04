@@ -3,6 +3,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import './globals.css'
 import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
+import Providers from './providers'
 
 const WagmiProvider = dynamic(() => import('@/components/WagmiProvider'), { ssr: false })
 
@@ -50,7 +51,9 @@ export default function RootLayout({
         <title>PixelGrid</title>
       </head>
       <body>
-        <WagmiProvider>{children}</WagmiProvider>
+        <Providers>
+          <WagmiProvider>{children}</WagmiProvider>
+        </Providers>
       </body>
     </html>
   );
