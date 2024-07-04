@@ -1,20 +1,23 @@
 // src/components/SlideOutMintModal.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useChainId, useSwitchChain, useAccount } from 'wagmi';
+import { useChainId, useSwitchChain, useAccount, useSignMessage, useWriteContract, useBalance, useReadContract } from 'wagmi';
 import { ColorPicker } from './ColorPicker';
+import { parseEther, formatEther, encodeAbiParameters, keccak256 } from 'viem';
+import { CONTRACT_ADDRESS, ABI, publicClient } from '../config/publicClient';
 
 interface SlideOutMintModalProps {
   isOpen: boolean;
   onClose: () => void;
   x: number;
   y: number;
+  onMintSuccess: () => void;
 }
 
-const PositionInput = React.memo(({ label, value }: { label: string; value: number }) => (
+const PositionInput: React.FC<{ label: string; value: number }> = React.memo(({ label, value }) => (
   <div className="flex flex-col">
     <label className="text-sm font-medium text-gray-700 mb-1">
       {label} Position
@@ -30,7 +33,7 @@ const PositionInput = React.memo(({ label, value }: { label: string; value: numb
 
 PositionInput.displayName = 'PositionInput';
 
-const MessageInput = React.memo(({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
+const MessageInput: React.FC<{ value: string; onChange: (value: string) => void }> = React.memo(({ value, onChange }) => (
   <div>
     <label htmlFor="ownerMessage" className="block text-sm font-medium text-gray-700 mb-1">
       Message
@@ -42,39 +45,110 @@ const MessageInput = React.memo(({ value, onChange }: { value: string; onChange:
       onChange={(e) => onChange(e.target.value)}
       className="border border-gray-300 p-2 rounded-lg w-full"
       rows={3}
+      maxLength={100}
     ></textarea>
   </div>
 ));
 
 MessageInput.displayName = 'MessageInput';
 
-export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, onClose, x, y }) => {
+export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, onClose, x, y, onMintSuccess }) => {
   const [color, setColor] = useState<RgbaColor>({ r: 0, g: 0, b: 0, a: 1 });
-  const [ownerMessage, setOwnerMessage] = useState('');
-  const [showConnectPrompt, setShowConnectPrompt] = useState(false);
+  const [ownerMessage, setOwnerMessage] = useState<string>('');
+  const [showConnectPrompt, setShowConnectPrompt] = useState<boolean>(false);
+  const [isMinting, setIsMinting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { data: balance } = useBalance({ address });
+
+  const { data: pixelPriceUSDC } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'PIXEL_PRICE_USDC',
+  });
+
+  const { data: ethUsdPrice } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'getLatestPrice',
+  });
+
+  const pixelPriceETH = pixelPriceUSDC && ethUsdPrice
+    ? parseEther((Number(pixelPriceUSDC) / Number(ethUsdPrice)).toString())
+    : parseEther('0.01'); // fallback price
+
+  const { writeContractAsync } = useWriteContract();
+
+  const isBalanceSufficient = balance && balance.value >= pixelPriceETH;
 
   useEffect(() => {
     setShowConnectPrompt(!isConnected || chainId !== base.id);
   }, [isConnected, chainId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!CONTRACT_ADDRESS) {
+      setError('Contract address is not defined');
+      return;
+    }
+
     if (chainId !== base.id) {
       switchChain({ chainId: base.id });
     } else {
-      console.log('Minting pixel:', { x, y, color, ownerMessage });
-      // Implement minting logic here
-      onClose();
+      setIsMinting(true);
+      try {
+        const message = keccak256(encodeAbiParameters(
+          [{ type: 'address' }, { type: 'uint16' }, { type: 'uint16' }],
+          [address!, x, y]
+        ));
+        const signature = await signMessageAsync({ message });
+
+        const result = await writeContractAsync({
+          address: CONTRACT_ADDRESS,
+          abi: ABI,
+          functionName: 'mintPixel',
+          args: [
+            color.r,
+            color.g,
+            color.b,
+            Math.floor(color.a * 255),
+            x,
+            y,
+            ownerMessage,
+            signature,
+          ],
+          value: pixelPriceETH,
+        });
+
+        if (!result) {
+          throw new Error('Failed to get transaction hash');
+        }
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: result });
+        if (receipt.status === 'success') {
+          onMintSuccess();
+          onClose();
+        } else {
+          throw new Error('Transaction failed');
+        }
+      } catch (error) {
+        console.error('Error minting pixel:', error);
+        setError('Failed to mint pixel. Please try again.');
+      } finally {
+        setIsMinting(false);
+      }
     }
-  };
+  }, [chainId, switchChain, signMessageAsync, writeContractAsync, color, x, y, ownerMessage, pixelPriceETH, onClose, onMintSuccess, address]);
 
   return (
     <div className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto z-10`}>
-        <div className="p-6">
+      <div className="p-6">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-0.5 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300"
@@ -102,19 +176,22 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
             </div>
             <ColorPicker color={color} onChange={setColor} />
             <MessageInput value={ownerMessage} onChange={setOwnerMessage} />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                disabled={isMinting}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={isMinting || !isBalanceSufficient}
               >
-                {chainId !== base.id ? 'Switch to Base' : 'Mint (~$0.01 + Fees)'}
+                {isMinting ? 'Minting...' : `Mint (${formatEther(pixelPriceETH)} ETH)`}
               </button>
             </div>
           </form>

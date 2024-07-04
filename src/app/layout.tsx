@@ -2,6 +2,9 @@ import '@coinbase/onchainkit/styles.css'
 import '@rainbow-me/rainbowkit/styles.css';
 import './globals.css'
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
+
+const WagmiProvider = dynamic(() => import('@/components/WagmiProvider'), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'PixelGrid',
@@ -46,7 +49,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>PixelGrid</title>
       </head>
-      <body>{children}</body>
+      <body>
+        <WagmiProvider>{children}</WagmiProvider>
+      </body>
     </html>
   );
 }

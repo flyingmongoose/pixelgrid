@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useContractData } from '@/hooks/useContractData';
+import { SlideOutMintModal } from './SlideOutMintModal';
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 50;
@@ -10,7 +11,7 @@ const GRID_WIDTH = 1921;
 const GRID_HEIGHT = 1081;
 const EXTRA_PAN_FACTOR = 1;
 
-interface CanvasPixelGridProps {
+export interface CanvasPixelGridProps {
   dimensions: { width: number; height: number };
   onPixelClick: (x: number, y: number) => void;
   selectedPixel: { x: number, y: number } | null;
@@ -18,12 +19,13 @@ interface CanvasPixelGridProps {
 
 export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: CanvasPixelGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { pixels } = useContractData();
+  const { pixels, isLoading, progress } = useContractData();
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [hoveredPixel, setHoveredPixel] = useState<{ x: number, y: number } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isPixelMinted = useCallback((x: number, y: number) => {
     return pixels.some(pixel => pixel.x === x && pixel.y === y);
@@ -217,8 +219,9 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const handleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDragging && hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
       onPixelClick(hoveredPixel.x, hoveredPixel.y);
+      setIsModalOpen(true);
     }
-  }, [hoveredPixel, isPixelMinted, onPixelClick, isDragging]);
+  }, [hoveredPixel, isPixelMinted, isDragging, onPixelClick]);
 
   const handlePan = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
     const panAmount = 50 / zoom; // Adjust this value to change pan speed
@@ -242,6 +245,10 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
     });
   }, [zoom, clampPanOffset]);
 
+  if (isLoading) {
+    return <div>Loading... {progress.toFixed(2)}%</div>;
+  }
+
   return (
     <div className="relative w-full h-full">
       <canvas
@@ -256,6 +263,15 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
         onClick={handleClick}
         className="w-full h-full block cursor-grab active:cursor-grabbing"
       />
+      {selectedPixel && (
+        <SlideOutMintModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          x={selectedPixel.x}
+          y={selectedPixel.y}
+          onMintSuccess={() => {/* Implement this if needed */}}
+        />
+      )}
       <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center bg-white p-2 rounded-full shadow">
         <button
           onClick={() => handleZoom(zoom * 0.9, dimensions.width / 2, dimensions.height / 2)}
@@ -302,7 +318,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
       </div>
       <div className="absolute top-1/2 right-2 transform -translate-y-1/2 flex flex-col items-center bg-white p-2 rounded-full shadow">
         <button
-          onClick={() => handlePan('down')}
+          onClick={() => handlePan('up')}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mb-2 z-10"
         >
           ↑
@@ -318,7 +334,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
           />
         </div>
         <button
-          onClick={() => handlePan('up')}
+          onClick={() => handlePan('down')}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mt-2 z-10"
         >
           ↓

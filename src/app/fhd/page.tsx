@@ -2,92 +2,55 @@
 
 'use client';
 
-import React from 'react';
-import { useEffect, useRef, useState } from 'react';
-import { WagmiProvider, createConfig } from 'wagmi';
-import { base } from 'viem/chains';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CanvasPixelGrid, CanvasPixelGridProps } from '@/components/CanvasPixelGrid';
 import { NavbarHeader } from '@/components/NavbarHeader';
 import { Footer } from '@/components/layout/Footer';
-import { CanvasPixelGrid } from '@/components/CanvasPixelGrid';
-import { SlideOutMintModal } from '@/components/SlideOutMintModal';
-import { useAccount } from 'wagmi';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
 
-const config = getDefaultConfig({
-  appName: 'PixelGrid',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-  chains: [base],
-  ssr: true,
-});
-
-const queryClient = new QueryClient();
-
-function FHDPageContent() {
-  const mainRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 1920, height: 1080 });
-  const [showMintModal, setShowMintModal] = useState(false);
-  const [selectedPixel, setSelectedPixel] = useState<{ x: number, y: number } | null>(null);
-  const { isConnected } = useAccount();
+export default function FHDPage() {
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPixel, setSelectedPixel] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    function updateDimensions() {
-      if (mainRef.current) {
-        const { clientWidth, clientHeight } = mainRef.current;
-        setDimensions({
-          width: clientWidth,
-          height: clientHeight
-        });
-      }
-    }
+    const updateDimensions = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight - 128, // Adjust for header and footer
+      });
+    };
 
-    window.addEventListener('resize', updateDimensions);
     updateDimensions();
+    window.addEventListener('resize', updateDimensions);
 
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  const handlePixelClick = (x: number, y: number) => {
+  const handleLoadingComplete = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handlePixelClick = useCallback((x: number, y: number) => {
     setSelectedPixel({ x, y });
-    setShowMintModal(true);
+  }, []);
+
+  const canvasPixelGridProps: CanvasPixelGridProps = {
+    dimensions,
+    onPixelClick: handlePixelClick,
+    selectedPixel,
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white">
+    <main className="flex flex-col min-h-screen">
+      {isLoading && <LoadingOverlay onLoadingComplete={handleLoadingComplete} />}
       <NavbarHeader />
-      <main className="flex-grow overflow-hidden">
-        <div ref={mainRef} className="w-full h-full relative">
-        <CanvasPixelGrid 
-          dimensions={dimensions} 
-          onPixelClick={handlePixelClick}
-          selectedPixel={selectedPixel}
-        />
+      <div className="flex-grow relative">
+        <div className="absolute inset-0">
+          <CanvasPixelGrid {...canvasPixelGridProps} />
         </div>
-      </main>
+      </div>
       <Footer />
-      {showMintModal && selectedPixel && (
-        <SlideOutMintModal
-          isOpen={showMintModal}
-          onClose={() => {
-            setShowMintModal(false);
-            setSelectedPixel(null);
-          }}
-          x={selectedPixel.x}
-          y={selectedPixel.y}
-        />
-      )}
-    </div>
-  );
-}
-
-export default function FHDPage() {
-  return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <FHDPageContent />
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    </main>
   );
 }
