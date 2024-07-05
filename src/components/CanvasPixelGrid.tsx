@@ -1,6 +1,7 @@
 // src/components/CanvasPixelGrid.tsx
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useContractData } from '@/hooks/useContractData';
 import { SlideOutMintModal } from './SlideOutMintModal';
 
 const MIN_ZOOM = 1;
@@ -10,29 +11,32 @@ const GRID_WIDTH = 1921;
 const GRID_HEIGHT = 1081;
 const EXTRA_PAN_FACTOR = 1;
 
-// Define the Pixel type
-interface Pixel {
-  x: number;
-  y: number;
-  color: string;
-  ownerMessage: string;
-}
-
 export interface CanvasPixelGridProps {
   dimensions: { width: number; height: number };
   onPixelClick: (x: number, y: number) => void;
   selectedPixel: { x: number, y: number } | null;
-  pixels: Pixel[];
 }
 
-export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixels }: CanvasPixelGridProps) {
+export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: CanvasPixelGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { pixels, isLoading, progress } = useContractData();
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [hoveredPixel, setHoveredPixel] = useState<{ x: number, y: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mouseDownCell, setMouseDownCell] = useState<{ x: number, y: number } | null>(null);
+
+  const gridCells = useMemo(() => {
+    const cells = [];
+    for (let y = 0; y < GRID_HEIGHT; y++) {
+      for (let x = 0; x < GRID_WIDTH; x++) {
+        cells.push({ x, y, left: x, right: x + 1, top: y, bottom: y + 1 });
+      }
+    }
+    return cells;
+  }, []);
 
   const isPixelMinted = useCallback((x: number, y: number) => {
     return pixels.some(pixel => pixel.x === x && pixel.y === y);
@@ -43,59 +47,61 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-  
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-  
-    const totalGridWidth = GRID_WIDTH * zoom;
-    const totalGridHeight = GRID_HEIGHT * zoom;
-  
-    const offsetX = Math.round((canvas.width - totalGridWidth) / 2 + panOffset.x * zoom);
-    const offsetY = Math.round((canvas.height - totalGridHeight) / 2 + panOffset.y * zoom);
-  
-    ctx.translate(offsetX, offsetY);
-  
+
+    const scaleX = canvas.width / GRID_WIDTH;
+    const scaleY = canvas.height / GRID_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+
+    const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
+    const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
+
+    ctx.translate(translateX, translateY);
+    ctx.scale(scale * zoom, scale * zoom);
+    ctx.translate(panOffset.x, panOffset.y);
+
     // Draw background grid
     ctx.beginPath();
     for (let x = 0; x <= GRID_WIDTH; x++) {
-      ctx.moveTo(x * zoom, 0);
-      ctx.lineTo(x * zoom, totalGridHeight);
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, GRID_HEIGHT);
     }
     for (let y = 0; y <= GRID_HEIGHT; y++) {
-      ctx.moveTo(0, y * zoom);
-      ctx.lineTo(totalGridWidth, y * zoom);
+      ctx.moveTo(0, y);
+      ctx.lineTo(GRID_WIDTH, y);
     }
     ctx.strokeStyle = '#eee';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 / (scale * zoom);
     ctx.stroke();
-  
+
     // Draw minted pixels
     pixels.forEach(pixel => {
       ctx.fillStyle = pixel.color;
-      ctx.fillRect(pixel.x * zoom, pixel.y * zoom, zoom, zoom);
+      ctx.fillRect(pixel.x, pixel.y, 1, 1);
     });
-  
+
     // Draw hover effect
     if (hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
       ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-      ctx.fillRect(hoveredPixel.x * zoom, hoveredPixel.y * zoom, zoom, zoom);
+      ctx.fillRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
       ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(hoveredPixel.x * zoom, hoveredPixel.y * zoom, zoom, zoom);
+      ctx.lineWidth = 2 / (scale * zoom);
+      ctx.strokeRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
     }
-  
+
     // Draw selected pixel
     if (selectedPixel) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(selectedPixel.x * zoom, selectedPixel.y * zoom, zoom, zoom);
+      ctx.fillRect(selectedPixel.x, selectedPixel.y, 1, 1);
       ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(selectedPixel.x * zoom, selectedPixel.y * zoom, zoom, zoom);
+      ctx.lineWidth = 2 / (scale * zoom);
+      ctx.strokeRect(selectedPixel.x, selectedPixel.y, 1, 1);
     }
-  
+
     ctx.restore();
-}, [pixels, zoom, panOffset, hoveredPixel, selectedPixel, isPixelMinted]);
-  
+  }, [pixels, zoom, panOffset, hoveredPixel, isPixelMinted, selectedPixel]);
 
   useEffect(() => {
     draw();
@@ -104,133 +110,134 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
   const clampPanOffset = useCallback((offset: { x: number; y: number }, currentZoom: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return offset;
-  
-    const totalGridWidth = GRID_WIDTH * currentZoom;
-    const totalGridHeight = GRID_HEIGHT * currentZoom;
-  
-    const maxPanX = (totalGridWidth - canvas.width) / (2 * currentZoom);
-    const maxPanY = (totalGridHeight - canvas.height) / (2 * currentZoom);
-  
+
+    const scaleX = canvas.width / GRID_WIDTH;
+    const scaleY = canvas.height / GRID_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+
+    const viewportWidth = canvas.width / (scale * currentZoom);
+    const viewportHeight = canvas.height / (scale * currentZoom);
+
+    const extraPanX = GRID_WIDTH * EXTRA_PAN_FACTOR / currentZoom;
+    const extraPanY = GRID_HEIGHT * EXTRA_PAN_FACTOR / currentZoom;
+    const maxPanX = Math.max(0, (GRID_WIDTH - viewportWidth) / 2 + extraPanX);
+    const maxPanY = Math.max(0, (GRID_HEIGHT - viewportHeight) / 2 + extraPanY);
+
     return {
       x: Math.max(Math.min(offset.x, maxPanX), -maxPanX),
       y: Math.max(Math.min(offset.y, maxPanY), -maxPanY)
     };
   }, []);
 
+  const getGridCellFromMouse = useCallback((mouseX: number, mouseY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const canvasX = mouseX - rect.left;
+    const canvasY = mouseY - rect.top;
+
+    const scaleX = canvas.width / GRID_WIDTH;
+    const scaleY = canvas.height / GRID_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+
+    const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
+    const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
+
+    const gridX = (canvasX - translateX) / (scale * zoom) - panOffset.x;
+    const gridY = (canvasY - translateY) / (scale * zoom) - panOffset.y;
+
+    return gridCells.find(cell =>
+      gridX >= cell.left && gridX < cell.right &&
+      gridY >= cell.top && gridY < cell.bottom
+    );
+  }, [zoom, panOffset, gridCells]);
+
   const handleZoom = useCallback((newZoom: number, mouseX: number, mouseY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     newZoom = Math.min(Math.max(newZoom, MIN_ZOOM), MAX_ZOOM);
-
     if (newZoom === zoom) return;
 
-    const cellWidth = canvas.width / GRID_WIDTH;
-    const cellHeight = canvas.height / GRID_HEIGHT;
-
-    const gridStartX = (canvas.width - GRID_WIDTH * cellWidth * zoom) / 2 - panOffset.x * zoom;
-    const gridStartY = (canvas.height - GRID_HEIGHT * cellHeight * zoom) / 2 - panOffset.y * zoom;
-
-    const mouseGridX = (mouseX - gridStartX) / (cellWidth * zoom);
-    const mouseGridY = (mouseY - gridStartY) / (cellHeight * zoom);
-
-    const panX = mouseGridX * (1 - newZoom / zoom);
-    const panY = mouseGridY * (1 - newZoom / zoom);
-
-    const newPanOffset = clampPanOffset({
-      x: panOffset.x + panX,
-      y: panOffset.y + panY
-    }, newZoom);
+    const cellBefore = getGridCellFromMouse(mouseX, mouseY);
+    if (!cellBefore) return;
 
     setZoom(newZoom);
-    setPanOffset(newPanOffset);
-  }, [zoom, panOffset, clampPanOffset]);
+
+    const cellAfter = getGridCellFromMouse(mouseX, mouseY);
+    if (!cellAfter) return;
+
+    setPanOffset(prev => clampPanOffset({
+      x: prev.x + (cellAfter.x - cellBefore.x),
+      y: prev.y + (cellAfter.y - cellBefore.y)
+    }, newZoom));
+
+    draw();
+  }, [zoom, clampPanOffset, draw, getGridCellFromMouse]);
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
     event.preventDefault();
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    handleZoom(zoom * (event.deltaY < 0 ? 1.1 : 0.9), mouseX, mouseY);
+    handleZoom(zoom * (event.deltaY < 0 ? 1.1 : 0.9), event.clientX, event.clientY);
   }, [handleZoom, zoom]);
 
   const handleMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const cell = getGridCellFromMouse(event.clientX, event.clientY);
+    if (cell && !isPixelMinted(cell.x, cell.y)) {
+      setMouseDownCell(cell);
+    }
     setIsDragging(true);
     setLastMousePos({ x: event.clientX, y: event.clientY });
-  }, []);
+  }, [getGridCellFromMouse, isPixelMinted]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-  
+
     if (isDragging) {
       const dx = event.clientX - lastMousePos.x;
       const dy = event.clientY - lastMousePos.y;
-  
+
+      const scaleX = canvas.width / GRID_WIDTH;
+      const scaleY = canvas.height / GRID_HEIGHT;
+      const scale = Math.min(scaleX, scaleY);
+
       setPanOffset(prev => clampPanOffset({
-        x: prev.x - dx / zoom,
-        y: prev.y - dy / zoom
+        x: prev.x + dx / (scale * zoom),
+        y: prev.y + dy / (scale * zoom)
       }, zoom));
-  
+
       setLastMousePos({ x: event.clientX, y: event.clientY });
+      setMouseDownCell(null); // Reset mouseDownCell if dragging
     } else {
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-  
-      // Calculate the size of the entire grid in pixels
-      const totalGridWidth = GRID_WIDTH * zoom;
-      const totalGridHeight = GRID_HEIGHT * zoom;
-  
-      // Calculate the offset of the grid within the canvas
-      const offsetX = (canvasWidth - totalGridWidth) / 2 + panOffset.x * zoom;
-      const offsetY = (canvasHeight - totalGridHeight) / 2 + panOffset.y * zoom;
-  
-      // Calculate the grid coordinates
-      const gridX = Math.floor((mouseX - offsetX) / zoom);
-      const gridY = Math.floor((mouseY - offsetY) / zoom);
-  
-      if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
-        setHoveredPixel({ x: gridX, y: gridY });
-        canvas.style.cursor = !isPixelMinted(gridX, gridY) ? 'pointer' : 'default';
+      const cell = getGridCellFromMouse(event.clientX, event.clientY);
+      if (cell) {
+        setHoveredPixel(cell);
+        canvas.style.cursor = !isPixelMinted(cell.x, cell.y) ? 'pointer' : 'default';
       } else {
         setHoveredPixel(null);
         canvas.style.cursor = 'default';
       }
-  
-      console.log('Mouse position:', { x: mouseX, y: mouseY });
-      console.log('Calculated grid position:', { x: gridX, y: gridY });
-      console.log('Pan offset:', panOffset);
-      console.log('Zoom:', zoom);
-      console.log('Canvas dimensions:', { width: canvasWidth, height: canvasHeight });
-      console.log('Total grid dimensions:', { width: totalGridWidth, height: totalGridHeight });
-      console.log('Grid offset:', { x: offsetX, y: offsetY });
     }
-  
-    draw();
-  }, [isDragging, zoom, panOffset, isPixelMinted, draw]);
-  
 
-  const handleMouseUp = useCallback(() => {
+    draw();
+  }, [isDragging, lastMousePos, zoom, clampPanOffset, isPixelMinted, draw, getGridCellFromMouse]);
+
+  const handleMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(false);
-  }, []);
+    const cell = getGridCellFromMouse(event.clientX, event.clientY);
+    if (cell && mouseDownCell && cell.x === mouseDownCell.x && cell.y === mouseDownCell.y && !isPixelMinted(cell.x, cell.y)) {
+      onPixelClick(cell.x, cell.y);
+      setIsModalOpen(true);
+    }
+    setMouseDownCell(null);
+  }, [getGridCellFromMouse, mouseDownCell, isPixelMinted, onPixelClick]);
 
   const handleMouseLeave = useCallback(() => {
     setIsDragging(false);
     setHoveredPixel(null);
+    setMouseDownCell(null);
   }, []);
-
-  const handleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging && hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
-      onPixelClick(hoveredPixel.x, hoveredPixel.y);
-      setIsModalOpen(true);
-    }
-  }, [hoveredPixel, isPixelMinted, isDragging, onPixelClick]);
 
   const handlePan = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
     const panAmount = 50 / zoom; // Adjust this value to change pan speed
@@ -254,6 +261,10 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
     });
   }, [zoom, clampPanOffset]);
 
+  if (isLoading) {
+    return <div>Loading... {progress.toFixed(2)}%</div>;
+  }
+
   return (
     <div className="relative w-full h-full">
       <canvas
@@ -265,7 +276,6 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onClick={handleClick}
         className="w-full h-full block cursor-grab active:cursor-grabbing"
       />
       {selectedPixel && (
@@ -279,7 +289,12 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
       )}
       <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center bg-white p-2 rounded-full shadow">
         <button
-          onClick={() => handleZoom(zoom * 0.9, dimensions.width / 2, dimensions.height / 2)}
+          onClick={(e) => {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+              handleZoom(zoom * 0.9, e.clientX, e.clientY);
+            }
+          }}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2"
         >
           -
@@ -289,11 +304,21 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixel
           min={MIN_ZOOM}
           max={MAX_ZOOM}
           value={zoom}
-          onChange={(e) => handleZoom(Number(e.target.value), dimensions.width / 2, dimensions.height / 2)}
+          onChange={(e) => {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+              handleZoom(Number(e.target.value), rect.width / 2, rect.height / 2);
+            }
+          }}
           className="w-96"
         />
         <button
-          onClick={() => handleZoom(zoom * 1.1, dimensions.width / 2, dimensions.height / 2)}
+          onClick={(e) => {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+              handleZoom(zoom * 1.1, e.clientX, e.clientY);
+            }
+          }}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center ml-2"
         >
           +

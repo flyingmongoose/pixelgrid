@@ -78,7 +78,6 @@ export default function FHDPage(): JSX.Element {
     dimensions: dimensions,
     onPixelClick: handlePixelClick,
     selectedPixel: selectedPixel,
-    pixels: pixels,
   };
 
   //console.log('Rendering FHDPage, isLoading:', isLoading, 'displayProgress:', displayProgress);
