@@ -147,8 +147,8 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
     const gridX = (canvasX - translateX) / (scale * zoom) - panOffset.x;
     const gridY = (canvasY - translateY) / (scale * zoom) - panOffset.y;
 
-    return gridCells.find(cell =>
-      gridX >= cell.left && gridX < cell.right &&
+    return gridCells.find(cell => 
+      gridX >= cell.left && gridX < cell.right && 
       gridY >= cell.top && gridY < cell.bottom
     );
   }, [zoom, panOffset, gridCells]);
@@ -245,21 +245,25 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
       const newOffset = { ...prev };
       switch (direction) {
         case 'left':
-          newOffset.x -= panAmount;
-          break;
-        case 'right':
           newOffset.x += panAmount;
           break;
+        case 'right':
+          newOffset.x -= panAmount;
+          break;
         case 'up':
-          newOffset.y -= panAmount;
+          newOffset.y += panAmount;
           break;
         case 'down':
-          newOffset.y += panAmount;
+          newOffset.y -= panAmount;
           break;
       }
       return clampPanOffset(newOffset, zoom);
     });
   }, [zoom, clampPanOffset]);
+
+  useEffect(() => {
+    draw();
+  }, [panOffset, draw]);
 
   if (isLoading) {
     return <div>Loading... {progress.toFixed(2)}%</div>;
@@ -331,14 +335,17 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
         >
           ←
         </button>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={((panOffset.x + GRID_WIDTH / 2) / GRID_WIDTH) * 100}
-          onChange={(e) => setPanOffset(prev => clampPanOffset({ ...prev, x: (Number(e.target.value) / 100) * GRID_WIDTH - GRID_WIDTH / 2 }, zoom))}
-          className="w-96"
-        />
+
+<input
+  type="range"
+  min={0}
+  max={100}
+  value={100 - ((panOffset.x + GRID_WIDTH / 2) / GRID_WIDTH) * 100}
+  onChange={(e) => setPanOffset(prev => clampPanOffset({ ...prev, x: (GRID_WIDTH / 2 - (Number(e.target.value) / 100) * GRID_WIDTH) }, zoom))}
+  className="w-96"
+/>
+
+
         <button
           onClick={() => handlePan('right')}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center ml-2"
