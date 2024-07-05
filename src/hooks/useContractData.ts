@@ -1,7 +1,7 @@
 // src/hooks/useContractData.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { usePublicClient, useContractRead } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESS, ABI } from '../config/publicClient';
 
 interface Pixel {
@@ -13,118 +13,169 @@ interface Pixel {
 
 type PixelData = [bigint, bigint, string];
 
-export function useContractData() {
-  const [pixels, setPixels] = useState<Pixel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const publicClient = usePublicClient();
+export function useContractData(): {
+  pixels: Pixel[];
+  isLoading: boolean;
+  progress: number;
+  refreshPixel: (x: number, y: number) => Promise<void>;
+} {
+  var [pixels, setPixels] = useState<Pixel[]>([]);
+  var [isLoading, setIsLoading] = useState<boolean>(true);
+  var [progress, setProgress] = useState<number>(0);
+  var [totalMintedPixels, setTotalMintedPixels] = useState<bigint | null>(null);
+  var publicClient = usePublicClient();
 
-  const { data: totalMintedPixels } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: ABI,
-    functionName: 'totalMintedPixels',
-  });
+  var fetchTotalMintedPixels = useCallback(function(): Promise<void> {
+    if (!publicClient) {
+      console.error('Public client not available');
+      return Promise.resolve();
+    }
 
-  const loadBatch = useCallback(async (start: number, batchSize: number) => {
-    if (!totalMintedPixels || !publicClient) return;
+    return publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: ABI,
+      functionName: 'totalMintedPixels',
+    }).then(function(result) {
+      setTotalMintedPixels(result as bigint);
+      //console.log('Total minted pixels:', result.toString());
+    }).catch(function(error) {
+      console.error('Error fetching total minted pixels:', error);
+    });
+  }, [publicClient]);
 
-    const totalPixels = Number(totalMintedPixels);
-    const end = Math.min(start + batchSize, totalPixels);
-    const batchIndexes = Array.from({ length: end - start }, (_, i) => start + i);
+  var loadBatch = useCallback(function(start: number, batchSize: number): Promise<void> {
+    if (totalMintedPixels === null || !publicClient) {
+      //console.log('Total minted pixels or public client not available');
+      return Promise.resolve();
+    }
 
-    try {
-      const pixelsData = await publicClient.multicall({
-        contracts: batchIndexes.map(index => ({
+    var totalPixels = Number(totalMintedPixels);
+    if (totalPixels === 0) {
+      //console.log('No pixels to load');
+      setIsLoading(false);
+      setProgress(100);
+      return Promise.resolve();
+    }
+
+    var end = Math.min(start + batchSize, totalPixels);
+    var batchIndexes = Array.from({ length: end - start }, function(_, i) { return start + i; });
+
+    //console.log('Loading batch:', start, 'to', end, 'of', totalPixels);
+
+    return publicClient.multicall({
+      contracts: batchIndexes.map(function(index) {
+        return {
           address: CONTRACT_ADDRESS,
           abi: ABI,
           functionName: 'pixels',
           args: [BigInt(index)],
-        })),
-        allowFailure: true,
-      });
-
-      const newPixels = pixelsData
-        .map((pixelData) => {
+        };
+      }),
+      allowFailure: true,
+    }).then(function(pixelsData) {
+      var newPixels = pixelsData
+        .map(function(pixelData) {
           if (pixelData.status === 'success' && pixelData.result) {
-            // First, cast to unknown, then to PixelData
-            const [color, position, ownerMessage] = pixelData.result as unknown as PixelData;
+            var result = pixelData.result as unknown as PixelData;
+            var color = result[0];
+            var position = result[1];
+            var ownerMessage = result[2];
             
-            const x = Number(position & BigInt(0xFFFF));
-            const y = Number(position >> BigInt(16));
-            const r = Number((color >> BigInt(24)) & BigInt(0xFF));
-            const g = Number((color >> BigInt(16)) & BigInt(0xFF));
-            const b = Number((color >> BigInt(8)) & BigInt(0xFF));
-            const a = Number(color & BigInt(0xFF));
+            var x = Number(position & BigInt(0xFFFF));
+            var y = Number(position >> BigInt(16));
+            var r = Number((color >> BigInt(24)) & BigInt(0xFF));
+            var g = Number((color >> BigInt(16)) & BigInt(0xFF));
+            var b = Number((color >> BigInt(8)) & BigInt(0xFF));
+            var a = Number(color & BigInt(0xFF));
             
             return {
-              x,
-              y,
-              color: `rgba(${r},${g},${b},${a / 255})`,
-              ownerMessage,
+              x: x,
+              y: y,
+              color: 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255) + ')',
+              ownerMessage: ownerMessage,
             };
           }
           return null;
         })
-        .filter((pixel): pixel is Pixel => pixel !== null);
+        .filter(function(pixel): pixel is Pixel { return pixel !== null; });
 
-      setPixels(prevPixels => [...prevPixels, ...newPixels]);
-      setProgress((end / totalPixels) * 100);
+      setPixels(function(prevPixels) { return prevPixels.concat(newPixels); });
+      var newProgress = Math.min((end / totalPixels) * 100, 100);
+      setProgress(newProgress);
+      //console.log('Progress:', newProgress.toFixed(2) + '%');
 
       if (end < totalPixels) {
-        await loadBatch(end, batchSize);
+        return loadBatch(end, batchSize);
       } else {
+        //console.log('All pixels loaded');
         setIsLoading(false);
+        return Promise.resolve();
       }
-    } catch (error) {
+    }).catch(function(error) {
       console.error('Error loading pixel batch:', error);
       setIsLoading(false);
-    }
+      return Promise.resolve();
+    });
   }, [totalMintedPixels, publicClient]);
 
-  useEffect(() => {
-    if (totalMintedPixels && publicClient) {
+  useEffect(function() {
+    fetchTotalMintedPixels();
+  }, [fetchTotalMintedPixels]);
+
+  useEffect(function() {
+    if (totalMintedPixels !== null && publicClient) {
+      //console.log('Starting to load pixels, total:', totalMintedPixels.toString());
       loadBatch(0, 1000);
+    } else {
+      //console.log('Waiting for totalMintedPixels and publicClient');
     }
   }, [totalMintedPixels, publicClient, loadBatch]);
 
-  const refreshPixel = useCallback(async (x: number, y: number) => {
+  var refreshPixel = useCallback(function(x: number, y: number): Promise<void> {
     if (!publicClient) {
       console.error('Public client is not available');
-      return;
+      return Promise.resolve();
     }
 
-    const tokenId = BigInt(x) * BigInt(65536) + BigInt(y);
-    try {
-      const data = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
-        abi: ABI,
-        functionName: 'pixels',
-        args: [tokenId],
-      });
-
+    var tokenId = BigInt(x) * BigInt(65536) + BigInt(y);
+    return publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: ABI,
+      functionName: 'pixels',
+      args: [tokenId],
+    }).then(function(data) {
       if (data) {
-        // First, cast to unknown, then to PixelData
-        const [color, position, ownerMessage] = data as unknown as PixelData;
-        const r = Number((color >> BigInt(24)) & BigInt(0xFF));
-        const g = Number((color >> BigInt(16)) & BigInt(0xFF));
-        const b = Number((color >> BigInt(8)) & BigInt(0xFF));
-        const a = Number(color & BigInt(0xFF));
+        var result = data as unknown as PixelData;
+        var color = result[0];
+        var r = Number((color >> BigInt(24)) & BigInt(0xFF));
+        var g = Number((color >> BigInt(16)) & BigInt(0xFF));
+        var b = Number((color >> BigInt(8)) & BigInt(0xFF));
+        var a = Number(color & BigInt(0xFF));
+        var ownerMessage = result[2];
 
-        const updatedPixel: Pixel = {
-          x,
-          y,
-          color: `rgba(${r},${g},${b},${a / 255})`,
-          ownerMessage,
+        var updatedPixel: Pixel = {
+          x: x,
+          y: y,
+          color: 'rgba(' + r + ',' + g + ',' + b + ',' + (a / 255) + ')',
+          ownerMessage: ownerMessage,
         };
 
-        setPixels(prevPixels => prevPixels.map(p => 
-          (p.x === x && p.y === y) ? updatedPixel : p
-        ));
+        setPixels(function(prevPixels) {
+          return prevPixels.map(function(p) {
+            return (p.x === x && p.y === y) ? updatedPixel : p;
+          });
+        });
+        //console.log('Pixel refreshed:', '(' + x + ', ' + y + ')');
       }
-    } catch (error) {
+    }).catch(function(error) {
       console.error('Error refreshing pixel:', error);
-    }
+    });
   }, [publicClient]);
 
-  return { pixels, isLoading, progress, refreshPixel };
+  return { 
+    pixels: pixels, 
+    isLoading: isLoading, 
+    progress: isNaN(progress) ? 0 : progress, 
+    refreshPixel: refreshPixel 
+  };
 }

@@ -44,14 +44,14 @@ export function NavbarHeader() {
       </div>
       <header className="flex-shrink-0 sticky top-0 z-50 p-4 border-b flex justify-between items-center bg-white">
         <PixelGridLogo />
-        <div className="flex-grow flex justify-center">
+        {/* <div className="flex-grow flex justify-center">
           <button
             onClick={handleMintClick}
             className="font-bold text-[#0052FF] hover:underline transition-all text-[1.7rem] bg-transparent border-none cursor-pointer"
           >
             Mint Pixel
           </button>
-        </div>
+        </div> */}
         <div className="flex items-center space-x-4">
           <a
             href="https://x.com/PixelGridOnBase"

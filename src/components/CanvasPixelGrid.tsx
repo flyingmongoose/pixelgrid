@@ -1,7 +1,6 @@
 // src/components/CanvasPixelGrid.tsx
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useContractData } from '@/hooks/useContractData';
 import { SlideOutMintModal } from './SlideOutMintModal';
 
 const MIN_ZOOM = 1;
@@ -11,15 +10,23 @@ const GRID_WIDTH = 1921;
 const GRID_HEIGHT = 1081;
 const EXTRA_PAN_FACTOR = 1;
 
+// Define the Pixel type
+interface Pixel {
+  x: number;
+  y: number;
+  color: string;
+  ownerMessage: string;
+}
+
 export interface CanvasPixelGridProps {
   dimensions: { width: number; height: number };
   onPixelClick: (x: number, y: number) => void;
   selectedPixel: { x: number, y: number } | null;
+  pixels: Pixel[];
 }
 
-export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: CanvasPixelGridProps) {
+export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel, pixels }: CanvasPixelGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { pixels, isLoading, progress } = useContractData();
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -34,64 +41,61 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
+  
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-
-    const scaleX = canvas.width / GRID_WIDTH;
-    const scaleY = canvas.height / GRID_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
-
-    const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
-    const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
-
-    ctx.translate(translateX, translateY);
-    ctx.scale(scale * zoom, scale * zoom);
-    ctx.translate(panOffset.x, panOffset.y);
-
+  
+    const totalGridWidth = GRID_WIDTH * zoom;
+    const totalGridHeight = GRID_HEIGHT * zoom;
+  
+    const offsetX = Math.round((canvas.width - totalGridWidth) / 2 + panOffset.x * zoom);
+    const offsetY = Math.round((canvas.height - totalGridHeight) / 2 + panOffset.y * zoom);
+  
+    ctx.translate(offsetX, offsetY);
+  
     // Draw background grid
     ctx.beginPath();
     for (let x = 0; x <= GRID_WIDTH; x++) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, GRID_HEIGHT);
+      ctx.moveTo(x * zoom, 0);
+      ctx.lineTo(x * zoom, totalGridHeight);
     }
     for (let y = 0; y <= GRID_HEIGHT; y++) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(GRID_WIDTH, y);
+      ctx.moveTo(0, y * zoom);
+      ctx.lineTo(totalGridWidth, y * zoom);
     }
     ctx.strokeStyle = '#eee';
-    ctx.lineWidth = 1 / (scale * zoom);
+    ctx.lineWidth = 1;
     ctx.stroke();
-
+  
     // Draw minted pixels
     pixels.forEach(pixel => {
       ctx.fillStyle = pixel.color;
-      ctx.fillRect(pixel.x, pixel.y, 1, 1);
+      ctx.fillRect(pixel.x * zoom, pixel.y * zoom, zoom, zoom);
     });
-
+  
     // Draw hover effect
     if (hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
       ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-      ctx.fillRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
+      ctx.fillRect(hoveredPixel.x * zoom, hoveredPixel.y * zoom, zoom, zoom);
       ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2 / (scale * zoom);
-      ctx.strokeRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(hoveredPixel.x * zoom, hoveredPixel.y * zoom, zoom, zoom);
     }
-
+  
     // Draw selected pixel
     if (selectedPixel) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(selectedPixel.x, selectedPixel.y, 1, 1);
+      ctx.fillRect(selectedPixel.x * zoom, selectedPixel.y * zoom, zoom, zoom);
       ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2 / (scale * zoom);
-      ctx.strokeRect(selectedPixel.x, selectedPixel.y, 1, 1);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(selectedPixel.x * zoom, selectedPixel.y * zoom, zoom, zoom);
     }
-
+  
     ctx.restore();
-  }, [pixels, zoom, panOffset, hoveredPixel, isPixelMinted, selectedPixel]);
+}, [pixels, zoom, panOffset, hoveredPixel, selectedPixel, isPixelMinted]);
+  
 
   useEffect(() => {
     draw();
@@ -100,19 +104,13 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const clampPanOffset = useCallback((offset: { x: number; y: number }, currentZoom: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return offset;
-
-    const scaleX = canvas.width / GRID_WIDTH;
-    const scaleY = canvas.height / GRID_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
-
-    const viewportWidth = canvas.width / (scale * currentZoom);
-    const viewportHeight = canvas.height / (scale * currentZoom);
-
-    const extraPanX = GRID_WIDTH * EXTRA_PAN_FACTOR / currentZoom;
-    const extraPanY = GRID_HEIGHT * EXTRA_PAN_FACTOR / currentZoom;
-    const maxPanX = Math.max(0, (GRID_WIDTH - viewportWidth) / 2 + extraPanX);
-    const maxPanY = Math.max(0, (GRID_HEIGHT - viewportHeight) / 2 + extraPanY);
-
+  
+    const totalGridWidth = GRID_WIDTH * currentZoom;
+    const totalGridHeight = GRID_HEIGHT * currentZoom;
+  
+    const maxPanX = (totalGridWidth - canvas.width) / (2 * currentZoom);
+    const maxPanY = (totalGridHeight - canvas.height) / (2 * currentZoom);
+  
     return {
       x: Math.max(Math.min(offset.x, maxPanX), -maxPanX),
       y: Math.max(Math.min(offset.y, maxPanY), -maxPanY)
@@ -127,15 +125,14 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
 
     if (newZoom === zoom) return;
 
-    const scaleX = canvas.width / GRID_WIDTH;
-    const scaleY = canvas.height / GRID_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
+    const cellWidth = canvas.width / GRID_WIDTH;
+    const cellHeight = canvas.height / GRID_HEIGHT;
 
-    const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
-    const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
+    const gridStartX = (canvas.width - GRID_WIDTH * cellWidth * zoom) / 2 - panOffset.x * zoom;
+    const gridStartY = (canvas.height - GRID_HEIGHT * cellHeight * zoom) / 2 - panOffset.y * zoom;
 
-    const mouseGridX = (mouseX - translateX) / (scale * zoom) - panOffset.x;
-    const mouseGridY = (mouseY - translateY) / (scale * zoom) - panOffset.y;
+    const mouseGridX = (mouseX - gridStartX) / (cellWidth * zoom);
+    const mouseGridY = (mouseY - gridStartY) / (cellHeight * zoom);
 
     const panX = mouseGridX * (1 - newZoom / zoom);
     const panY = mouseGridY * (1 - newZoom / zoom);
@@ -168,33 +165,36 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+  
     if (isDragging) {
       const dx = event.clientX - lastMousePos.x;
       const dy = event.clientY - lastMousePos.y;
-
-      const scaleX = canvas.width / GRID_WIDTH;
-      const scaleY = canvas.height / GRID_HEIGHT;
-      const scale = Math.min(scaleX, scaleY);
-
+  
       setPanOffset(prev => clampPanOffset({
-        x: prev.x + dx / (scale * zoom),
-        y: prev.y + dy / (scale * zoom)
+        x: prev.x - dx / zoom,
+        y: prev.y - dy / zoom
       }, zoom));
-
+  
       setLastMousePos({ x: event.clientX, y: event.clientY });
     } else {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;
-
-      const scaleX = canvas.width / GRID_WIDTH;
-      const scaleY = canvas.height / GRID_HEIGHT;
-      const scale = Math.min(scaleX, scaleY);
-
-      const gridX = Math.floor((mouseX - (canvas.width - GRID_WIDTH * scale * zoom) / 2) / (scale * zoom) - panOffset.x);
-      const gridY = Math.floor((mouseY - (canvas.height - GRID_HEIGHT * scale * zoom) / 2) / (scale * zoom) - panOffset.y);
-
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+  
+      // Calculate the size of the entire grid in pixels
+      const totalGridWidth = GRID_WIDTH * zoom;
+      const totalGridHeight = GRID_HEIGHT * zoom;
+  
+      // Calculate the offset of the grid within the canvas
+      const offsetX = (canvasWidth - totalGridWidth) / 2 + panOffset.x * zoom;
+      const offsetY = (canvasHeight - totalGridHeight) / 2 + panOffset.y * zoom;
+  
+      // Calculate the grid coordinates
+      const gridX = Math.floor((mouseX - offsetX) / zoom);
+      const gridY = Math.floor((mouseY - offsetY) / zoom);
+  
       if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
         setHoveredPixel({ x: gridX, y: gridY });
         canvas.style.cursor = !isPixelMinted(gridX, gridY) ? 'pointer' : 'default';
@@ -202,10 +202,19 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
         setHoveredPixel(null);
         canvas.style.cursor = 'default';
       }
+  
+      console.log('Mouse position:', { x: mouseX, y: mouseY });
+      console.log('Calculated grid position:', { x: gridX, y: gridY });
+      console.log('Pan offset:', panOffset);
+      console.log('Zoom:', zoom);
+      console.log('Canvas dimensions:', { width: canvasWidth, height: canvasHeight });
+      console.log('Total grid dimensions:', { width: totalGridWidth, height: totalGridHeight });
+      console.log('Grid offset:', { x: offsetX, y: offsetY });
     }
-
+  
     draw();
-  }, [isDragging, lastMousePos, zoom, panOffset, clampPanOffset, isPixelMinted, draw]);
+  }, [isDragging, zoom, panOffset, isPixelMinted, draw]);
+  
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -244,10 +253,6 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
       return clampPanOffset(newOffset, zoom);
     });
   }, [zoom, clampPanOffset]);
-
-  if (isLoading) {
-    return <div>Loading... {progress.toFixed(2)}%</div>;
-  }
 
   return (
     <div className="relative w-full h-full">

@@ -9,9 +9,10 @@ const vt323 = VT323({
 
 interface LoadingOverlayProps {
   onLoadingComplete: () => void;
+  progress: number;
 }
 
-export function LoadingOverlay({ onLoadingComplete }: LoadingOverlayProps) {
+export function LoadingOverlay({ onLoadingComplete, progress }: LoadingOverlayProps) {
   const [filledPixels, setFilledPixels] = useState(0);
   const [loadingDots, setLoadingDots] = useState('');
   const [pixels, setPixels] = useState<string[]>(Array(LOADING_TOTAL_PIXELS).fill(''));
@@ -32,52 +33,62 @@ export function LoadingOverlay({ onLoadingComplete }: LoadingOverlayProps) {
   }, [pixels]);
 
   useEffect(() => {
-    const pixelIntervalId = setInterval(() => {
-      if (filledPixels < LOADING_TOTAL_PIXELS) {
-        const newPixel = generatePixel();
-        if (newPixel) {
-          setPixels(prev => {
-            const newPixels = [...prev];
-            newPixels[newPixel.index] = newPixel.color;
-            return newPixels;
-          });
-          setFilledPixels(prev => prev + 1);
-        }
-      }
-    }, 50);
+    let pixelIntervalId: NodeJS.Timeout;
+    let textIntervalId: NodeJS.Timeout;
+    let percentageIntervalId: NodeJS.Timeout;
 
-    const textIntervalId = setInterval(() => {
-      setLoadingDots(prev => {
-        switch (prev) {
-          case '': return '.';
-          case '.': return '..';
-          case '..': return '...';
-          case '...': return '';
-          default: return '';
+    const animateLoading = () => {
+      pixelIntervalId = setInterval(() => {
+        if (filledPixels < LOADING_TOTAL_PIXELS) {
+          const newPixel = generatePixel();
+          if (newPixel) {
+            setPixels(prev => {
+              const newPixels = [...prev];
+              newPixels[newPixel.index] = newPixel.color;
+              return newPixels;
+            });
+            setFilledPixels(prev => prev + 1);
+          }
         }
-      });
-    }, 500);
+      }, 50);
 
-    const percentageIntervalId = setInterval(() => {
-      setDisplayPercentage(prev => {
-        const actualPercentage = (filledPixels / LOADING_TOTAL_PIXELS) * 100;
-        const newPercentage = Math.min(prev + 1, Math.max(actualPercentage, prev));
-        if (newPercentage >= 100) {
-          clearInterval(percentageIntervalId);
-          clearInterval(pixelIntervalId);
-          clearInterval(textIntervalId);
-          onLoadingComplete();
-        }
-        return newPercentage;
-      });
-    }, 50);
+      textIntervalId = setInterval(() => {
+        setLoadingDots(prev => {
+          switch (prev) {
+            case '': return '.';
+            case '.': return '..';
+            case '..': return '...';
+            case '...': return '';
+            default: return '';
+          }
+        });
+      }, 500);
+
+      percentageIntervalId = setInterval(() => {
+        setDisplayPercentage(prev => {
+          const actualPercentage = Math.min(progress, 100);
+          const newPercentage = Math.min(prev + 1, Math.max(actualPercentage, prev));
+          //console.log('Current progress:', progress, 'Display percentage:', newPercentage);
+          if (newPercentage >= 100) {
+            clearInterval(percentageIntervalId);
+            clearInterval(pixelIntervalId);
+            clearInterval(textIntervalId);
+            console.log('Loading complete, calling onLoadingComplete');
+            onLoadingComplete();
+          }
+          return newPercentage;
+        });
+      }, 50);
+    };
+
+    animateLoading();
 
     return () => {
       clearInterval(pixelIntervalId);
       clearInterval(textIntervalId);
       clearInterval(percentageIntervalId);
     };
-  }, [filledPixels, generatePixel, onLoadingComplete]);
+  }, [filledPixels, generatePixel, progress, onLoadingComplete]);
 
   const pixelGrid = useMemo(() => (
     <div
@@ -100,13 +111,13 @@ export function LoadingOverlay({ onLoadingComplete }: LoadingOverlayProps) {
   ), [loadingDots]);
 
   const percentageText = useMemo(() => (
-    <p className={`text-black text-xl mt-0 ${vt323.className}`}>
+    <p className={`text-black text-xl mt-0 ${vt323.className} percentage-text`}>
       {Math.round(displayPercentage)}%
     </p>
   ), [displayPercentage]);
 
   return (
-    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-50 loading-overlay">
       <div className="text-center">
         {pixelGrid}
         <div className="flex flex-col items-center">
