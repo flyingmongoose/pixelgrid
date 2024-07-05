@@ -335,17 +335,14 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
         >
           ←
         </button>
-
-<input
-  type="range"
-  min={0}
-  max={100}
-  value={100 - ((panOffset.x + GRID_WIDTH / 2) / GRID_WIDTH) * 100}
-  onChange={(e) => setPanOffset(prev => clampPanOffset({ ...prev, x: (GRID_WIDTH / 2 - (Number(e.target.value) / 100) * GRID_WIDTH) }, zoom))}
-  className="w-96"
-/>
-
-
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={100 - ((panOffset.x + GRID_WIDTH / 2) / GRID_WIDTH) * 100}
+          onChange={(e) => setPanOffset(prev => clampPanOffset({ ...prev, x: (GRID_WIDTH / 2 - (Number(e.target.value) / 100) * GRID_WIDTH) }, zoom))}
+          className="w-96"
+        />
         <button
           onClick={() => handlePan('right')}
           className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center ml-2"
