@@ -8,67 +8,53 @@
 
     If you like this project, please head on over to this project's [Devfolio and vote for it!](https://devfolio.co/projects/pixelgrid-1c75)
 
+---
+
 ## 2. Technical Architecture
 
 ### 2.1 Smart Contract
-
-The PixelGrid smart contract is the core of our platform, enabling users to mint, manage, and trade individual pixels as unique NFTs. Key features include:
-
+    The PixelGrid smart contract is the core of our platform, enabling users to mint, manage, and trade individual pixels as unique NFTs. Key features include:
 - **Pixel Minting**
-  
   - Users can mint individual pixels by specifying RGBA color values and X, Y coordinates. Each pixel is a unique NFT with its own token ID.
-
 - **Pixel Updating**
-  
   - Pixel owners can update the color and associated message of their pixels.
-
 - **Snapshot Creation**
-  
   - Admins can create snapshots of the entire grid, capturing the state at a specific point in time.
-
+  - This will become an automated feature.
 - **Snapshot Minting**
-  
   - Users can mint snapshot NFTs, which represent the entire grid state at the time of snapshot creation.
-
 - **Token URI Generation**
-  
   - The contract generates on-chain metadata and SVG images for both individual pixels and snapshots.
-
 - **Price Oracle Integration**
-  
   - Uses Chainlink price feeds to determine pixel and snapshot print prices in ETH based on a fixed USDC price.
-
+  - This guarantees that mints will always have a cost of $0.01 USD per pixel, and $0.50 USD per snapshot.
 - **Royalties**
-  
-  - Implements ERC2981 for royalties on secondary sales, with customizable royalty settings for individual tokens.
-
+  - Implements ERC2981 for royalties on secondary sales, such as NFT trades, with customizable royalty settings for individual tokens.
+  - **Default:**
+    - 5%
+  - **Minimum:**
+    - 2.5%
+  - **Purpose:**
+    - Fund ongoing development and expansion of project.
 - **Access Control**
-  
   - Utilizes OpenZeppelin's AccessControl for role-based permissions.
-
 - **Pausable**
-  
   - Includes functionality to pause and unpause contract operations for emergency situations.
-
+  - Developer has pledged to **only** use this in event of emergency.
 - **Reentrancy Protection**
-  
   - Implements OpenZeppelin's ReentrancyGuard to prevent reentrancy attacks.
-
 - **Minting Limits**
-  
   - Enforces limits on minting frequency and total mints per address.
-  
-  - Maximum of fifty (50) pixel mints per wallet.
-  
-  - Maximum of one (1) snapshot mint per wallet.
-
-- **Pre-release Period**
-  
+  - Max Pixel Mints Per Wallet
+    - Fifty (50)
+  - Max Snapshot Mints Per Wallet
+    - One (1)
+- **Snapshot Pre-release Period**  
   - Implements a pre-release period for snapshot minting, giving priority to pixel owners.
-    
-    - Currently two (2) full days.
-
-The contract also includes several utility functions for packing and unpacking color and position data, as well as generating SVG representations of pixels and snapshots. These features create a robust foundation for the PixelGrid platform, enabling a wide range of interactions and ensuring the uniqueness and tradability of each pixel and snapshot NFT.
+  - Currently two (2) full days.
+- **More**
+  - The contract also includes several utility functions for packing and unpacking color and position data, as well as generating SVG representations of pixels and snapshots. 
+  - These features create a robust foundation for the PixelGrid platform, enabling a wide range of interactions and ensuring the uniqueness and tradability of each pixel and snapshot NFT.
 
 ### 2.2 Frontend
 
@@ -77,6 +63,8 @@ The contract also includes several utility functions for packing and unpacking c
 ### 2.3 Blockchain Integration
 
 [Explanation of integration with Base chain, use of wagmi, viem, and RainbowKit for wallet connections]
+
+---
 
 ## 3. User Experience
 
@@ -92,6 +80,8 @@ The contract also includes several utility functions for packing and unpacking c
 
 [Details on wallet connection process and supported wallets]
 
+---
+
 ## 4. Token Economics
 
 ### 4.1 Pixel Pricing
@@ -101,6 +91,8 @@ The contract also includes several utility functions for packing and unpacking c
 ### 4.2 Owner Messages
 
 [Explanation of the owner message feature associated with each pixel]
+
+---
 
 ## 5. Technical Considerations
 
@@ -116,9 +108,13 @@ The contract also includes several utility functions for packing and unpacking c
 
 [Description of the RPC fallback system for reliable blockchain interactions]
 
+---
+
 ## 6. Future Developments
 
 [Outline potential future features and improvements, such as enhanced community features, additional grid functionalities, or cross-chain integrations]
+
+---
 
 ## 7. Conclusion
 
