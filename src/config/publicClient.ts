@@ -61,17 +61,31 @@ export const ABI = [
     outputs: [],
   },
   {
-    name: 'withdrawFunds',
-    type: 'function',
-    stateMutability: 'payable',
-    inputs: [],
-    outputs: [],
-  },
-  {
     name: 'getLatestPrice',
     type: 'function',
     stateMutability: 'view',
     inputs: [],
     outputs: [{ type: 'int256' }],
+  },
+  {
+    name: 'updatePixel',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { type: 'uint256', name: 'tokenId' },
+      { type: 'uint8', name: 'red' },
+      { type: 'uint8', name: 'green' },
+      { type: 'uint8', name: 'blue' },
+      { type: 'uint8', name: 'alpha' },
+      { type: 'string', name: 'ownerMessage' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'tokenURI',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ type: 'uint256', name: 'tokenId' }],
+    outputs: [{ type: 'string' }],
   },
 ] as const;

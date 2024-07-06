@@ -1,5 +1,7 @@
 // src/components/SlideOutMintModal.tsx
 
+'use client';
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
@@ -254,6 +256,16 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
               </div>
               <ColorPicker color={color} onChange={setColor} />
               <MessageInput value={ownerMessage} onChange={setOwnerMessage} />
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Price per pixel:</span>
+                <span className="text-sm font-bold text-green-600">$0.01 USD</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Estimated ETH price:</span>
+                <span className="text-sm font-bold text-blue-600">
+                  {formatEther(pixelPriceETH)} ETH
+                </span>
+              </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               <div className="flex justify-end space-x-2">
                 <button
