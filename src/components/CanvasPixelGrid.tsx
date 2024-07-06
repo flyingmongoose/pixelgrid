@@ -138,7 +138,9 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
     let gridY = Math.floor((canvasY - translateY) / (scale * zoom) - panOffset.y);
   
     // Adjust Y coordinate: +1 for every 10 pixels (adjusted for zoom)
-    const yAdjustment = Math.floor(canvasY / (7.5 * zoom)); // set to 5 to make aggressive movement adjustment, 10 should be fine
+    // set to 5 to make aggressive movement adjustment, 7.5 - 10 should be fine
+    // Might add UI element to allow the user to modify this.
+    const yAdjustment = Math.floor(canvasY / (10 * zoom)); 
     gridY += yAdjustment;
   
     if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
