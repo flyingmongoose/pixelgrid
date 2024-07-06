@@ -10,33 +10,63 @@
 
 ## 2. Technical Architecture
 
-### ### 2.1 Smart Contract
+### 2.1 Smart Contract
 
 The PixelGrid smart contract is the core of our platform, enabling users to mint, manage, and trade individual pixels as unique NFTs. Key features include:
 
-- **Pixel Minting**: Users can mint individual pixels by specifying RGBA color values and X, Y coordinates. Each pixel is a unique NFT with its own token ID.
+- **Pixel Minting**
+  
+  - Users can mint individual pixels by specifying RGBA color values and X, Y coordinates. Each pixel is a unique NFT with its own token ID.
 
-- **Pixel Updating**: Pixel owners can update the color and associated message of their pixels.
+- **Pixel Updating**
+  
+  - Pixel owners can update the color and associated message of their pixels.
 
-- **Snapshot Creation**: Admins can create snapshots of the entire grid, capturing the state at a specific point in time.
+- **Snapshot Creation**
+  
+  - Admins can create snapshots of the entire grid, capturing the state at a specific point in time.
 
-- **Snapshot Minting**: Users can mint snapshot NFTs, which represent the entire grid state at the time of snapshot creation.
+- **Snapshot Minting**
+  
+  - Users can mint snapshot NFTs, which represent the entire grid state at the time of snapshot creation.
 
-- **Token URI Generation**: The contract generates on-chain metadata and SVG images for both individual pixels and snapshots.
+- **Token URI Generation**
+  
+  - The contract generates on-chain metadata and SVG images for both individual pixels and snapshots.
 
-- **Price Oracle Integration**: Uses Chainlink price feeds to determine pixel and snapshot prices in ETH based on a fixed USDC price.
+- **Price Oracle Integration**
+  
+  - Uses Chainlink price feeds to determine pixel and snapshot print prices in ETH based on a fixed USDC price.
 
-- **Royalties**: Implements ERC2981 for royalties on secondary sales, with customizable royalty settings for individual tokens.
+- **Royalties**
+  
+  - Implements ERC2981 for royalties on secondary sales, with customizable royalty settings for individual tokens.
 
-- **Access Control**: Utilizes OpenZeppelin's AccessControl for role-based permissions.
+- **Access Control**
+  
+  - Utilizes OpenZeppelin's AccessControl for role-based permissions.
 
-- **Pausable**: Includes functionality to pause and unpause contract operations for emergency situations.
+- **Pausable**
+  
+  - Includes functionality to pause and unpause contract operations for emergency situations.
 
-- **Reentrancy Protection**: Implements OpenZeppelin's ReentrancyGuard to prevent reentrancy attacks.
+- **Reentrancy Protection**
+  
+  - Implements OpenZeppelin's ReentrancyGuard to prevent reentrancy attacks.
 
-- **Minting Limits**: Enforces limits on minting frequency and total mints per address.
+- **Minting Limits**
+  
+  - Enforces limits on minting frequency and total mints per address.
+  
+  - Maximum of fifty (50) pixel mints per wallet.
+  
+  - Maximum of one (1) snapshot mint per wallet.
 
-- **Pre-release Period**: Implements a pre-release period for snapshot minting, giving priority to pixel owners.
+- **Pre-release Period**
+  
+  - Implements a pre-release period for snapshot minting, giving priority to pixel owners.
+    
+    - Currently two (2) full days.
 
 The contract also includes several utility functions for packing and unpacking color and position data, as well as generating SVG representations of pixels and snapshots. These features create a robust foundation for the PixelGrid platform, enabling a wide range of interactions and ensuring the uniqueness and tradability of each pixel and snapshot NFT.
 
