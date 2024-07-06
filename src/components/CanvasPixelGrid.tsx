@@ -28,16 +28,6 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mouseDownCell, setMouseDownCell] = useState<{ x: number, y: number } | null>(null);
 
-  const gridCells = useMemo(() => {
-    const cells = [];
-    for (let y = 0; y < GRID_HEIGHT; y++) {
-      for (let x = 0; x < GRID_WIDTH; x++) {
-        cells.push({ x, y, left: x, right: x + 1, top: y, bottom: y + 1 });
-      }
-    }
-    return cells;
-  }, []);
-
   const isPixelMinted = useCallback((x: number, y: number) => {
     return pixels.some(pixel => pixel.x === x && pixel.y === y);
   }, [pixels]);
@@ -132,26 +122,32 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const getGridCellFromMouse = useCallback((mouseX: number, mouseY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
-
+  
     const rect = canvas.getBoundingClientRect();
     const canvasX = mouseX - rect.left;
     const canvasY = mouseY - rect.top;
-
+  
     const scaleX = canvas.width / GRID_WIDTH;
     const scaleY = canvas.height / GRID_HEIGHT;
     const scale = Math.min(scaleX, scaleY);
-
+  
     const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
     const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
-
-    const gridX = (canvasX - translateX) / (scale * zoom) - panOffset.x;
-    const gridY = (canvasY - translateY) / (scale * zoom) - panOffset.y;
-
-    return gridCells.find(cell => 
-      gridX >= cell.left && gridX < cell.right && 
-      gridY >= cell.top && gridY < cell.bottom
-    );
-  }, [zoom, panOffset, gridCells]);
+  
+    const gridX = Math.floor((canvasX - translateX) / (scale * zoom) - panOffset.x);
+    let gridY = Math.floor((canvasY - translateY) / (scale * zoom) - panOffset.y);
+  
+    // Adjust Y coordinate: +1 for every 10 pixels (adjusted for zoom)
+    const yAdjustment = Math.floor(canvasY / (5 * zoom)); // More aggressive
+    gridY += yAdjustment;
+  
+    if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
+      return { x: gridX, y: gridY };
+    }
+  
+    return null;
+  }, [zoom, panOffset]);
+  
 
   const handleZoom = useCallback((newZoom: number, mouseX: number, mouseY: number) => {
     const canvas = canvasRef.current;
