@@ -1,0 +1,38 @@
+/* src/components/Whitepaper.module.css */
+
+.pixelBorder {
+  position: relative;
+}
+
+.pixelBorder::before,
+.pixelBorder::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px; /* Adjust this for thicker or thinner border */
+  background-image: linear-gradient(
+    to bottom,
+    #FF0000 0%, #FF0000 14.28%,
+    #FF7F00 14.28%, #FF7F00 28.57%,
+    #FFFF00 28.57%, #FFFF00 42.85%,
+    #00FF00 42.85%, #00FF00 57.14%,
+    #0000FF 57.14%, #0000FF 71.42%,
+    #4B0082 71.42%, #4B0082 85.71%,
+    #9400D3 85.71%, #9400D3 100%
+  );
+  background-size: 100% 56px; /* Adjust this to change the height of each color segment */
+  background-repeat: repeat-y;
+}
+
+.pixelBorder::before {
+  left: 0;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.pixelBorder::after {
+  right: 0;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}

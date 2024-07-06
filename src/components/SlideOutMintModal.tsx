@@ -209,9 +209,9 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
         ref={modalRef}
         className={`fixed left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto z-50`}
         style={{
-          top: 'calc(73px + 44px)', // Adjust for header height (73px) and warning div height (44px)
+          top: 'calc(73px)', // Adjust for header height (73px) and warning div height (44px)
           bottom: '113px', // Adjust for footer height
-          maxHeight: 'calc(100vh - 73px - 44px - 113px)', // Viewport height minus header, warning div, and footer
+          maxHeight: 'calc(100vh - 73px - 113px)', // Viewport height minus header, warning div, and footer
         }}
       >
         <div className="p-6">

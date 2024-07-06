@@ -1,58 +1,71 @@
 // src/components/NavbarHeader.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { PixelGridLogo } from '@/components/PixelGridLogo';
-import { MintModal } from '@/components/MintModal';
-import { base } from 'viem/chains';
-import { useAccount, useChainId, useSwitchChain } from 'wagmi';
+import { PixelGridIcon } from '@/components/PixelGridIcon';
+import Link from 'next/link';
 
 export function NavbarHeader() {
-  const [showMintModal, setShowMintModal] = useState(false);
+  const [isPixelGridHovered, setIsPixelGridHovered] = useState(false);
+  const [isWhitepaperHovered, setIsWhitepaperHovered] = useState(false);
+  const [isDevfolioHovered, setIsDevfolioHovered] = useState(false);
   const [isTwitterHovered, setIsTwitterHovered] = useState(false);
   const [isTelegramHovered, setIsTelegramHovered] = useState(false);
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
-
-  const handleMintClick = useCallback(() => {
-    if (!isConnected) {
-      setShowMintModal(true);
-    } else if (chainId !== base.id) {
-      switchChain({ chainId: base.id });
-    } else {
-      setShowMintModal(true);
-    }
-  }, [isConnected, chainId, switchChain]);
-
-  const handleCloseMintModal = useCallback(() => {
-    setShowMintModal(false);
-  }, []);
-
-  const handleMint = () => {
-    // Implement actual minting logic here
-    console.log('Minting...');
-    setShowMintModal(false);
-  };
 
   return (
     <>
-      <div className="flex-shrink-0 bg-red-600 text-white text-center py-2 font-bold text-lg">
-        <p>
-          ⚠️ <span className="underline">Non-Functional Work In Progress</span> ⚠️
-        </p>
-      </div>
       <header className="flex-shrink-0 sticky top-0 z-50 p-4 border-b flex justify-between items-center bg-white">
         <PixelGridLogo />
-        {/* <div className="flex-grow flex justify-center">
-          <button
-            onClick={handleMintClick}
-            className="font-bold text-[#0052FF] hover:underline transition-all text-[1.7rem] bg-transparent border-none cursor-pointer"
-          >
-            Mint Pixel
-          </button>
-        </div> */}
         <div className="flex items-center space-x-4">
+          <Link
+            href="/fhd"
+            className="text-black hover:text-[#0052FF] transition-colors"
+            onMouseEnter={() => setIsPixelGridHovered(true)}
+            onMouseLeave={() => setIsPixelGridHovered(false)}
+          >
+            <PixelGridIcon
+              size={24}
+              gridSize={4}
+              borderWidth={1}
+              isHovered={isPixelGridHovered}
+            />
+          </Link>
+          <Link
+            href="/whitepaper"
+            className={`text-black hover:text-[#0052FF] transition-colors`}
+            onMouseEnter={() => setIsWhitepaperHovered(true)}
+            onMouseLeave={() => setIsWhitepaperHovered(false)}
+          >
+            <span
+              className={`text-2xl filter ${isWhitepaperHovered ? 'brightness-75' : 'brightness-90'}`}
+              role="img"
+              aria-label="Whitepaper"
+              style={{ display: 'inline-block' }}
+            >
+              {isWhitepaperHovered ? '📄' : '📃'}
+            </span>
+          </Link>
+          <a
+            href="https://devfolio.co/projects/pixelgrid-1c75"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#3770FF] hover:text-[#273339] transition-colors"
+            onMouseEnter={() => setIsDevfolioHovered(true)}
+            onMouseLeave={() => setIsDevfolioHovered(false)}
+          >
+            <svg 
+              viewBox="0 0 118 129" 
+              xmlns="http://www.w3.org/2000/svg" 
+              height="24" 
+              className={`transition-transform duration-300 ${isDevfolioHovered ? 'scale-110' : 'scale-100'}`}
+            >
+              <g fill="currentColor">
+                <path d="m118 70.7c.26 29.53-21.71 54.87-50.95 58.2a16.34 16.34 0 0 1 -1.86.1c-5.82 0-37.28 0-48.9-.47a12.9 12.9 0 0 1 -10.36-7.81 15.81 15.81 0 0 0 5.5 1.32c4 .36 11.06 0 20.69 0 10.25 0 21.33.09 26.64.14a46.78 46.78 0 0 0 8.46-.65 60.65 60.65 0 0 0 34.78-19.3 63.6 63.6 0 0 0 16-35.07z"></path>
+                <path d="m113.34 58a58 58 0 0 1 -52.34 58h-49a14 14 0 0 1 -12-14v-88c0-7 5-14 12-14h50a57 57 0 0 1 51.34 58z"></path>
+              </g>
+            </svg>
+          </a>
           <a
             href="https://x.com/PixelGridOnBase"
             target="_blank"
@@ -85,16 +98,6 @@ export function NavbarHeader() {
           </a>
           <ConnectButton />
         </div>
-        {showMintModal && (
-          <MintModal
-            initialX="0"
-            initialY="0"
-            isConnected={isConnected}
-            chainId={chainId}
-            onClose={handleCloseMintModal}
-            onMint={handleMint}
-          />
-        )}
       </header>
     </>
   );

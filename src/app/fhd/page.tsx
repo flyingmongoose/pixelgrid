@@ -10,14 +10,14 @@ import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { useContractData } from '@/hooks/useContractData';
 
 var MINIMUM_LOADING_TIME = 2000; // 2 seconds
-var LOADING_TIMEOUT = 30000; // 30 seconds
+var LOADING_TIMEOUT =   30000; // 30 seconds
 
 export default function FHDPage(): JSX.Element {
   var [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   var [isLoading, setIsLoading] = useState<boolean>(true);
   var [selectedPixel, setSelectedPixel] = useState<{ x: number; y: number } | null>(null);
   var [displayProgress, setDisplayProgress] = useState<number>(0);
-  var { pixels, isLoading: isContractDataLoading, progress } = useContractData();
+  var { isLoading: isContractDataLoading, progress } = useContractData();
 
   useEffect(function() {
     var updateDimensions = function() {
