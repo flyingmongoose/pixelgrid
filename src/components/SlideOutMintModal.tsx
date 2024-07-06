@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -82,9 +82,14 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
     functionName: 'getLatestPrice',
   });
 
-  const pixelPriceETH = pixelPriceUSDC && ethUsdPrice
-    ? parseEther((Number(pixelPriceUSDC) / Number(ethUsdPrice)).toString())
-    : parseEther('0.01'); // fallback price
+  const pixelPriceETH = useMemo(() => {
+    if (pixelPriceUSDC && ethUsdPrice && ethUsdPrice !== BigInt(0)) {
+      // Convert USDC price (which is in cents) to ETH
+      // USDC has 6 decimals, ETH has 18 decimals
+      return (BigInt(pixelPriceUSDC) * BigInt(1e18)) / (BigInt(ethUsdPrice) * BigInt(100));
+    }
+    return BigInt(0); // Return BigInt(0) instead of 0n
+  }, [pixelPriceUSDC, ethUsdPrice]);
 
   const { writeContractAsync } = useWriteContract();
 
@@ -263,7 +268,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Estimated ETH price:</span>
                 <span className="text-sm font-bold text-blue-600">
-                  {formatEther(pixelPriceETH)} ETH
+                  {pixelPriceETH ? `${formatEther(pixelPriceETH)} ETH` : 'Calculating...'}
                 </span>
               </div>
               {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -279,9 +284,12 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  disabled={isMinting || !isBalanceSufficient}
+                  disabled={isMinting || !isBalanceSufficient || pixelPriceETH === BigInt(0)}
                 >
-                  {isMinting ? 'Minting...' : chainId !== base.id ? 'Switch to Base' : `Mint (${formatEther(pixelPriceETH)} ETH)`}
+                  {isMinting ? 'Minting...' : 
+                  chainId !== base.id ? 'Switch to Base' : 
+                  pixelPriceETH === BigInt(0) ? 'Calculating Price...' :
+                  `Mint (${formatEther(pixelPriceETH)} ETH)`}
                 </button>
               </div>
             </form>
