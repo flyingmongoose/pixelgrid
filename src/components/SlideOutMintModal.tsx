@@ -318,7 +318,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                 <span className="text-sm font-medium text-gray-700">Estimated ETH price:</span>
                 <div className="text-right">
                   <span className="text-sm font-medium text-gray-700">
-                    {isFetchingPrice ? 'Fetching Price' :
+                    {isFetchingPrice ? 'Fetching Price...' :
                      isErrorUSDC ? 'Error: Unable to fetch USDC price' :
                      isErrorETHPrice && fallbackEthPrice === null ? 'Error: Unable to fetch ETH price' :
                      pixelPriceETH === null ? 'Error calculating price' :
@@ -351,7 +351,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                 >
                   {isMinting ? 'Minting...' :
                    chainId !== base.id ? 'Switch to Base' :
-                   isFetchingPrice ? 'Fetching Price' :
+                   isFetchingPrice ? 'Fetching Price...' :
                    isPriceError ? 'Price Error' :
                    'Mint'}
                 </button>
