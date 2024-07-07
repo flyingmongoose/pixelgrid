@@ -6,10 +6,10 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { RgbaColor } from 'react-colorful';
 import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useChainId, useSwitchChain, useAccount, useSignMessage, useWriteContract, useBalance, useReadContract } from 'wagmi';
+import { useChainId, useSwitchChain, useAccount, useSignMessage, useWriteContract, useBalance, useReadContract, usePublicClient } from 'wagmi';
 import { ColorPicker } from './ColorPicker';
-import { parseEther, formatEther, encodeAbiParameters, keccak256 } from 'viem';
-import { CONTRACT_ADDRESS, ABI, publicClient } from '../config/publicClient';
+import { parseEther, formatEther, encodeAbiParameters, keccak256, formatUnits } from 'viem';
+import { CONTRACT_ADDRESS, ABI } from '../config/publicClient';
 
 interface SlideOutMintModalProps {
   isOpen: boolean;
@@ -60,8 +60,10 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
   const [showConnectPrompt, setShowConnectPrompt] = useState<boolean>(false);
   const [isMinting, setIsMinting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [modalState, setModalState] = useState(0); // 0: SlideOutMintModal, 1: RainbowModal
-  const [escapeCounter, setEscapeCounter] = useState(0);
+  const [modalState, setModalState] = useState<number>(0); // 0: SlideOutMintModal, 1: RainbowModal
+  const [escapeCounter, setEscapeCounter] = useState<number>(0);
+  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [fallbackEthPrice, setFallbackEthPrice] = useState<bigint | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   const chainId = useChainId();
@@ -69,38 +71,75 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
   const { isConnected, address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { data: balance } = useBalance({ address });
+  const publicClient = usePublicClient();
 
-  const { data: pixelPriceUSDC } = useReadContract({
+  const { data: pixelPriceUSDC, isLoading: isLoadingUSDC, isError: isErrorUSDC } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'PIXEL_PRICE_USDC',
   });
 
-  const { data: ethUsdPrice } = useReadContract({
+  const { data: ethUsdPrice, isLoading: isLoadingETHPrice, isError: isErrorETHPrice } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'getLatestPrice',
   });
 
-  const pixelPriceETH = useMemo(() => {
-    if (pixelPriceUSDC && ethUsdPrice && ethUsdPrice !== BigInt(0)) {
-      // Convert USDC price (which is in cents) to ETH
-      // USDC has 6 decimals, ETH has 18 decimals
-      return (BigInt(pixelPriceUSDC) * BigInt(1e18)) / (BigInt(ethUsdPrice) * BigInt(100));
+  useEffect(() => {
+    const fetchFallbackPrice = async (): Promise<void> => {
+      if (isErrorETHPrice || (ethUsdPrice === null && !isLoadingETHPrice)) {
+        try {
+          if (publicClient) {
+            const latestBlock = await publicClient.getBlock({ blockTag: 'latest' });
+            if (latestBlock.timestamp) {
+              const timestamp = Number(latestBlock.timestamp);
+              const oneDayAgo = timestamp - 24 * 60 * 60;
+              const response = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/market_chart/range?vs_currency=usd&from=${oneDayAgo}&to=${timestamp}`);
+              const data = await response.json();
+              const latestPrice = data.prices[data.prices.length - 1][1];
+              setDebugInfo(prev => `${prev}, Fallback ETH price: ${latestPrice}`);
+              setFallbackEthPrice(BigInt(Math.round(latestPrice * 100000000))); // Convert to 8 decimal places
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching fallback ETH price:', error);
+          setDebugInfo(prev => `${prev}, Fallback ETH price fetch failed`);
+        }
+      }
+    };
+
+    fetchFallbackPrice();
+  }, [isErrorETHPrice, ethUsdPrice, isLoadingETHPrice, publicClient]);
+
+  const pixelPriceETH = useMemo((): bigint | null => {
+    const usdcPrice = pixelPriceUSDC ? BigInt(pixelPriceUSDC.toString()) : null;
+    const ethPrice = ethUsdPrice ? BigInt(ethUsdPrice.toString()) : fallbackEthPrice;
+    
+    setDebugInfo(`USDC: ${usdcPrice}, ETH/USD: ${ethPrice}`);
+    
+    if (usdcPrice && ethPrice) {
+      if (ethPrice === BigInt(0)) {
+        setDebugInfo(prev => `${prev}, ETH price is zero`);
+        return null;
+      }
+      // USDC has 6 decimals, ETH has 18 decimals, price feed has 8 decimals
+      const ethAmount = (usdcPrice * BigInt(1e20)) / ethPrice;
+      setDebugInfo(prev => `${prev}, Calculated ETH: ${formatUnits(ethAmount, 18)}`);
+      return ethAmount;
     }
-    return BigInt(0); // Return BigInt(0) instead of 0n
-  }, [pixelPriceUSDC, ethUsdPrice]);
+    return null;
+  }, [pixelPriceUSDC, ethUsdPrice, fallbackEthPrice]);
 
   const { writeContractAsync } = useWriteContract();
 
-  const isBalanceSufficient = balance && balance.value >= pixelPriceETH;
+  const isBalanceSufficient = balance && pixelPriceETH ? balance.value >= pixelPriceETH : false;
 
   useEffect(() => {
     setShowConnectPrompt(!isConnected || chainId !== base.id);
   }, [isConnected, chainId]);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         setEscapeCounter(prev => prev + 1);
         if (modalState === 1) {
@@ -111,7 +150,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
       }
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent): void => {
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
         if (modalState === 1) {
           setModalState(0);
@@ -121,7 +160,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
       }
     };
 
-    const observerCallback = (mutations: MutationRecord[]) => {
+    const observerCallback = (mutations: MutationRecord[]): void => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList') {
           const addedNodes = Array.from(mutation.addedNodes);
@@ -150,7 +189,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
     };
   }, [onClose, modalState]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError(null);
 
@@ -161,12 +200,12 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
 
     if (chainId !== base.id) {
       switchChain({ chainId: base.id });
-    } else {
+    } else if (pixelPriceETH !== null && address) {
       setIsMinting(true);
       try {
         const message = keccak256(encodeAbiParameters(
           [{ type: 'address' }, { type: 'uint16' }, { type: 'uint16' }],
-          [address!, x, y]
+          [address, x, y]
         ));
         const signature = await signMessageAsync({ message });
 
@@ -191,12 +230,16 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
           throw new Error('Failed to get transaction hash');
         }
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: result });
-        if (receipt.status === 'success') {
-          onMintSuccess();
-          onClose();
+        if (publicClient) {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: result });
+          if (receipt.status === 'success') {
+            onMintSuccess();
+            onClose();
+          } else {
+            throw new Error('Transaction failed');
+          }
         } else {
-          throw new Error('Transaction failed');
+          throw new Error('Public client is not available');
         }
       } catch (error) {
         console.error('Error minting pixel:', error);
@@ -205,7 +248,13 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
         setIsMinting(false);
       }
     }
-  }, [chainId, switchChain, signMessageAsync, writeContractAsync, color, x, y, ownerMessage, pixelPriceETH, onClose, onMintSuccess, address]);
+  }, [chainId, switchChain, signMessageAsync, writeContractAsync, color, x, y, ownerMessage, pixelPriceETH, onClose, onMintSuccess, address, publicClient]);
+
+  // Flag to enable/disable debug info
+  const showDebugInfo = false;
+
+  const isFetchingPrice = isLoadingUSDC || isLoadingETHPrice;
+  const isPriceError = isErrorUSDC || (isErrorETHPrice && fallbackEthPrice === null) || pixelPriceETH === null;
 
   return (
     <>
@@ -265,14 +314,24 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                 <span className="text-sm font-medium text-gray-700">Price per pixel:</span>
                 <span className="text-sm font-bold text-green-600">$0.01 USD</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col mb-0 pb-0">
                 <span className="text-sm font-medium text-gray-700">Estimated ETH price:</span>
-                <span className="text-sm font-bold text-blue-600">
-                  {pixelPriceETH ? `${formatEther(pixelPriceETH)} ETH` : 'Calculating...'}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium text-gray-700">
+                    {isFetchingPrice ? 'Fetching Price' :
+                     isErrorUSDC ? 'Error: Unable to fetch USDC price' :
+                     isErrorETHPrice && fallbackEthPrice === null ? 'Error: Unable to fetch ETH price' :
+                     pixelPriceETH === null ? 'Error calculating price' :
+                     `${formatEther(pixelPriceETH)} ETH`}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-medium text-gray-700">+ Network Fees</span>
+                </div>
               </div>
+              {showDebugInfo && debugInfo && <p className="text-xs text-gray-500">Debug: {debugInfo}</p>}
               {error && <p className="text-red-500 text-sm">{error}</p>}
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-center space-x-2">
                 <button
                   type="button"
                   onClick={onClose}
@@ -283,13 +342,18 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  disabled={isMinting || !isBalanceSufficient || pixelPriceETH === BigInt(0)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    isFetchingPrice || isPriceError || !isBalanceSufficient || isMinting
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                  disabled={isFetchingPrice || isPriceError || !isBalanceSufficient || isMinting}
                 >
-                  {isMinting ? 'Minting...' : 
-                  chainId !== base.id ? 'Switch to Base' : 
-                  pixelPriceETH === BigInt(0) ? 'Calculating Price...' :
-                  `Mint (${formatEther(pixelPriceETH)} ETH)`}
+                  {isMinting ? 'Minting...' :
+                   chainId !== base.id ? 'Switch to Base' :
+                   isFetchingPrice ? 'Fetching Price' :
+                   isPriceError ? 'Price Error' :
+                   'Mint'}
                 </button>
               </div>
             </form>
