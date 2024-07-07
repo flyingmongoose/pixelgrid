@@ -263,11 +263,11 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
       )}
       <div
         ref={modalRef}
-        className={`fixed left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto z-50`}
+        className={`fixed left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto z-[60]`}
         style={{
           top: 'calc(73px)', // Adjust for header height (73px) and warning div height (44px)
-          bottom: '113px', // Adjust for footer height
-          maxHeight: 'calc(100vh - 73px - 113px)', // Viewport height minus header, warning div, and footer
+          bottom: '0', // Adjust for footer height
+          maxHeight: 'calc(100vh - 73px)', // Viewport height minus header, warning div, and footer
         }}
       >
         <div className="p-6">
@@ -282,7 +282,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
               </svg>
             </div>
           </button>
-          <h2 className="text-xl font-semibold mb-4">Mint a Pixel</h2>
+          <h3 className="text-xl font-semibold mb-4">Mint a Pixel</h3>
           {showConnectPrompt ? (
             <div className="text-center">
               <p className="mb-4 text-gray-600">Please connect your wallet to mint a pixel.</p>
