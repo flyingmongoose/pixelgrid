@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { RgbaColor } from 'react-colorful';
-import { base, baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useChainId, useSwitchChain, useAccount, useSignMessage, useWriteContract, useBalance, useReadContract, usePublicClient } from 'wagmi';
 import { ColorPicker } from './ColorPicker';
@@ -135,7 +135,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
   const isBalanceSufficient = balance && pixelPriceETH ? balance.value >= pixelPriceETH : false;
 
   useEffect(() => {
-    setShowConnectPrompt(!isConnected || chainId !== baseSepolia.id);
+    setShowConnectPrompt(!isConnected || chainId !== base.id);
   }, [isConnected, chainId]);
 
   useEffect(() => {
@@ -198,8 +198,8 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
       return;
     }
 
-    if (chainId !== baseSepolia.id) {
-      switchChain({ chainId: baseSepolia.id });
+    if (chainId !== base.id) {
+      switchChain({ chainId: base.id });
     } else if (pixelPriceETH !== null && address) {
       setIsMinting(true);
       try {
@@ -356,7 +356,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                   disabled={isFetchingPrice || isPriceError || !isBalanceSufficient || isMinting}
                 >
                   {isMinting ? 'Minting...' :
-                   chainId !== baseSepolia.id ? 'Switch to Base' :
+                   chainId !== base.id ? 'Switch to Base' :
                    isFetchingPrice ? 'Fetching Price...' :
                    isPriceError ? 'Price Error' :
                    'Mint'}

@@ -1,14 +1,14 @@
 // src/config/publicClient.ts
 
 import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 
 if (!process.env.NEXT_PUBLIC_RPC_URL) {
   throw new Error('NEXT_PUBLIC_RPC_URL environment variable is not set');
 }
 
 export const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: base,
   transport: http(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
