@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 export function Footer() {
   const [showTooltip, setShowTooltip] = useState(false);
-  const contractAddress = '0x4821011E135edcaE76fD2Ff857a45ECa9154a378';
+  const contractAddress = '0xF2C683a5a62Fce70512402E4245fe6988Ea12756';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(contractAddress).then(() => {

@@ -19,7 +19,7 @@ export interface CanvasPixelGridProps {
 
 export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: CanvasPixelGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { pixels, isLoading, progress } = useContractData();
+  const { pixels, isLoading, progress, refreshPixel } = useContractData();
   const [zoom, setZoom] = useState(INITIAL_ZOOM);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -286,7 +286,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
           onClose={() => setIsModalOpen(false)}
           x={selectedPixel.x}
           y={selectedPixel.y}
-          onMintSuccess={() => {/* Implement this if needed */}}
+          onMintSuccess={refreshPixel}
         />
       )}
       <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center bg-white p-2 rounded-full shadow">

@@ -1,11 +1,11 @@
 // src/config/wagmi.ts
 
 import { createConfig, http } from 'wagmi'
-import { base } from 'wagmi/chains'
+import { base, baseSepolia } from 'wagmi/chains'
 
 export const config = createConfig({
-  chains: [base],
+  chains: [baseSepolia],
   transports: {
-    [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
 })

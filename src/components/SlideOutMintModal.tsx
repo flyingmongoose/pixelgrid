@@ -4,11 +4,11 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { RgbaColor } from 'react-colorful';
-import { base } from 'viem/chains';
+import { base, baseSepolia } from 'viem/chains';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useChainId, useSwitchChain, useAccount, useSignMessage, useWriteContract, useBalance, useReadContract, usePublicClient } from 'wagmi';
 import { ColorPicker } from './ColorPicker';
-import { parseEther, formatEther, encodeAbiParameters, keccak256, formatUnits } from 'viem';
+import { parseEther, formatEther, encodeAbiParameters, keccak256, formatUnits, toHex, concat, encodePacked } from 'viem';
 import { CONTRACT_ADDRESS, ABI } from '../config/publicClient';
 
 interface SlideOutMintModalProps {
@@ -16,7 +16,7 @@ interface SlideOutMintModalProps {
   onClose: () => void;
   x: number;
   y: number;
-  onMintSuccess: () => void;
+  onMintSuccess: (x: number, y: number) => Promise<void>;
 }
 
 const PositionInput: React.FC<{ label: string; value: number }> = React.memo(({ label, value }) => (
@@ -135,7 +135,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
   const isBalanceSufficient = balance && pixelPriceETH ? balance.value >= pixelPriceETH : false;
 
   useEffect(() => {
-    setShowConnectPrompt(!isConnected || chainId !== base.id);
+    setShowConnectPrompt(!isConnected || chainId !== baseSepolia.id);
   }, [isConnected, chainId]);
 
   useEffect(() => {
@@ -198,16 +198,22 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
       return;
     }
 
-    if (chainId !== base.id) {
-      switchChain({ chainId: base.id });
+    if (chainId !== baseSepolia.id) {
+      switchChain({ chainId: baseSepolia.id });
     } else if (pixelPriceETH !== null && address) {
       setIsMinting(true);
       try {
-        const message = keccak256(encodeAbiParameters(
-          [{ type: 'address' }, { type: 'uint16' }, { type: 'uint16' }],
+        const messageToSign = encodePacked(
+          ['address', 'uint16', 'uint16'],
           [address, x, y]
-        ));
-        const signature = await signMessageAsync({ message });
+        );
+        console.log('Message to sign:', messageToSign);
+        
+        const messageHash = keccak256(messageToSign);
+        console.log('Message hash:', messageHash);
+        
+        const signature = await signMessageAsync({ message: { raw: messageHash } });
+        console.log('Signature:', signature);
 
         const result = await writeContractAsync({
           address: CONTRACT_ADDRESS,
@@ -233,7 +239,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
         if (publicClient) {
           const receipt = await publicClient.waitForTransactionReceipt({ hash: result });
           if (receipt.status === 'success') {
-            onMintSuccess();
+            await onMintSuccess(x, y);
             onClose();
           } else {
             throw new Error('Transaction failed');
@@ -243,7 +249,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
         }
       } catch (error) {
         console.error('Error minting pixel:', error);
-        setError('Failed to mint pixel. Please try again.');
+        setError(`Failed to mint pixel: ${(error as Error).message}`);
       } finally {
         setIsMinting(false);
       }
@@ -251,7 +257,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
   }, [chainId, switchChain, signMessageAsync, writeContractAsync, color, x, y, ownerMessage, pixelPriceETH, onClose, onMintSuccess, address, publicClient]);
 
   // Flag to enable/disable debug info
-  const showDebugInfo = false;
+  const showDebugInfo = true;
 
   const isFetchingPrice = isLoadingUSDC || isLoadingETHPrice;
   const isPriceError = isErrorUSDC || (isErrorETHPrice && fallbackEthPrice === null) || pixelPriceETH === null;
@@ -350,7 +356,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({ isOpen, on
                   disabled={isFetchingPrice || isPriceError || !isBalanceSufficient || isMinting}
                 >
                   {isMinting ? 'Minting...' :
-                   chainId !== base.id ? 'Switch to Base' :
+                   chainId !== baseSepolia.id ? 'Switch to Base' :
                    isFetchingPrice ? 'Fetching Price...' :
                    isPriceError ? 'Price Error' :
                    'Mint'}
