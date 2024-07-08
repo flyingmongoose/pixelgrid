@@ -1,14 +1,14 @@
 // src/components/CanvasPixelGrid.tsx
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useContractData } from '@/hooks/useContractData';
 import { SlideOutMintModal } from './SlideOutMintModal';
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 50;
 const INITIAL_ZOOM = 10;
-const GRID_WIDTH = 1921;
-const GRID_HEIGHT = 1081;
+const GRID_WIDTH = 1920;
+const GRID_HEIGHT = 1080;
 const EXTRA_PAN_FACTOR = 1;
 
 export interface CanvasPixelGridProps {
@@ -32,66 +32,67 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
     return pixels.some(pixel => pixel.x === x && pixel.y === y);
   }, [pixels]);
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+const draw = useCallback(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
 
-    const scaleX = canvas.width / GRID_WIDTH;
-    const scaleY = canvas.height / GRID_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
+  const scaleX = canvas.width / (GRID_WIDTH + 1);  // Add 1 to account for the extra line
+  const scaleY = canvas.height / (GRID_HEIGHT + 1);  // Add 1 to account for the extra line
+  const scale = Math.min(scaleX, scaleY);
 
-    const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
-    const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
+  const translateX = (canvas.width - (GRID_WIDTH + 1) * scale * zoom) / 2;
+  const translateY = (canvas.height - (GRID_HEIGHT + 1) * scale * zoom) / 2;
 
-    ctx.translate(translateX, translateY);
-    ctx.scale(scale * zoom, scale * zoom);
-    ctx.translate(panOffset.x, panOffset.y);
+  ctx.translate(translateX, translateY);
+  ctx.scale(scale * zoom, scale * zoom);
+  ctx.translate(panOffset.x, panOffset.y);
 
-    // Draw background grid
-    ctx.beginPath();
-    for (let x = 0; x <= GRID_WIDTH; x++) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, GRID_HEIGHT);
-    }
-    for (let y = 0; y <= GRID_HEIGHT; y++) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(GRID_WIDTH, y);
-    }
-    ctx.strokeStyle = '#eee';
-    ctx.lineWidth = 1 / (scale * zoom);
-    ctx.stroke();
+  // Draw background grid
+  ctx.beginPath();
+  for (let x = 0; x <= GRID_WIDTH + 1; x++) {  // Draw one extra vertical line
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, GRID_HEIGHT + 1);  // Extend to the extra horizontal line
+  }
+  for (let y = 0; y <= GRID_HEIGHT + 1; y++) {  // Draw one extra horizontal line
+    ctx.moveTo(0, y);
+    ctx.lineTo(GRID_WIDTH + 1, y);  // Extend to the extra vertical line
+  }
+  ctx.strokeStyle = '#eee';
+  ctx.lineWidth = 1 / (scale * zoom);
+  ctx.stroke();
 
-    // Draw minted pixels
-    pixels.forEach(pixel => {
-      ctx.fillStyle = pixel.color;
-      ctx.fillRect(pixel.x, pixel.y, 1, 1);
-    });
+  // Draw minted pixels
+  pixels.forEach(pixel => {
+    ctx.fillStyle = pixel.color;
+    ctx.fillRect(pixel.x, pixel.y, 1, 1);
+  });
 
-    // Draw hover effect
-    if (hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
-      ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-      ctx.fillRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
-      ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2 / (scale * zoom);
-      ctx.strokeRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
-    }
+  // Draw hover effect
+  if (hoveredPixel && !isPixelMinted(hoveredPixel.x, hoveredPixel.y)) {
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+    ctx.fillRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
+    ctx.strokeStyle = 'gold';
+    ctx.lineWidth = 2 / (scale * zoom);
+    ctx.strokeRect(hoveredPixel.x, hoveredPixel.y, 1, 1);
+  }
 
-    // Draw selected pixel
-    if (selectedPixel) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(selectedPixel.x, selectedPixel.y, 1, 1);
-      ctx.strokeStyle = 'gold';
-      ctx.lineWidth = 2 / (scale * zoom);
-      ctx.strokeRect(selectedPixel.x, selectedPixel.y, 1, 1);
-    }
+  // Draw selected pixel
+  if (selectedPixel) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(selectedPixel.x, selectedPixel.y, 1, 1);
+    ctx.strokeStyle = 'gold';
+    ctx.lineWidth = 2 / (scale * zoom);
+    ctx.strokeRect(selectedPixel.x, selectedPixel.y, 1, 1);
+  }
 
-    ctx.restore();
-  }, [pixels, zoom, panOffset, hoveredPixel, isPixelMinted, selectedPixel]);
+  ctx.restore();
+}, [pixels, zoom, panOffset, hoveredPixel, isPixelMinted, selectedPixel]);
+
 
   useEffect(() => {
     draw();
@@ -122,34 +123,24 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   const getGridCellFromMouse = useCallback((mouseX: number, mouseY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
-  
     const rect = canvas.getBoundingClientRect();
-    const canvasX = mouseX - rect.left;
+    const canvasX = (mouseX - rect.left) + 10;
     const canvasY = mouseY - rect.top;
-  
     const scaleX = canvas.width / GRID_WIDTH;
     const scaleY = canvas.height / GRID_HEIGHT;
     const scale = Math.min(scaleX, scaleY);
-  
     const translateX = (canvas.width - GRID_WIDTH * scale * zoom) / 2;
     const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
-  
     const gridX = Math.floor((canvasX - translateX) / (scale * zoom) - panOffset.x);
     let gridY = Math.floor((canvasY - translateY) / (scale * zoom) - panOffset.y);
-  
     // Adjust Y coordinate: +1 for every 10 pixels (adjusted for zoom)
-    // set to 5 to make aggressive movement adjustment, 7.5 - 10 should be fine
-    // Might add UI element to allow the user to modify this.
-    const yAdjustment = Math.floor(canvasY / (10 * zoom)); 
+    const yAdjustment = Math.floor(canvasY / (5 * zoom));
     gridY += yAdjustment;
-  
     if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
       return { x: gridX, y: gridY };
     }
-  
     return null;
   }, [zoom, panOffset]);
-  
 
   const handleZoom = useCallback((newZoom: number, mouseX: number, mouseY: number) => {
     const canvas = canvasRef.current;
@@ -206,7 +197,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
       }, zoom));
 
       setLastMousePos({ x: event.clientX, y: event.clientY });
-      setMouseDownCell(null); // Reset mouseDownCell if dragging
+      setMouseDownCell(null);
     } else {
       const cell = getGridCellFromMouse(event.clientX, event.clientY);
       if (cell) {
@@ -238,7 +229,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
   }, []);
 
   const handlePan = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
-    const panAmount = 50 / zoom; // Adjust this value to change pan speed
+    const panAmount = 50 / zoom;
     setPanOffset(prev => {
       const newOffset = { ...prev };
       switch (direction) {
