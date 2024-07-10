@@ -1,0 +1,54 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Source code
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Config files
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.eslintrc text eol=lf
+.prettierrc text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+
+# Next.js specific
+next.config.js text eol=lf
+next-env.d.ts text eol=lf
+
+# Tailwind CSS
+tailwind.config.js text eol=lf
+postcss.config.js text eol=lf
+
+# Exclude files from GitHub's language statistics
+*.json linguist-detectable=false
+*.lock linguist-detectable=false
+*.toml linguist-detectable=false
