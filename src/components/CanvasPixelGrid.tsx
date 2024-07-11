@@ -153,7 +153,7 @@ export function CanvasPixelGrid({ dimensions, onPixelClick, selectedPixel }: Can
     const translateY = (canvas.height - GRID_HEIGHT * scale * zoom) / 2;
     const gridX = Math.floor((canvasX - translateX) / (scale * zoom) - panOffset.x);
     let gridY = Math.floor((canvasY - translateY) / (scale * zoom) - panOffset.y);
-    const yAdjustment = Math.floor(canvasY / (10 * zoom));
+    const yAdjustment = Math.floor(canvasY / (20 * zoom));
     gridY += yAdjustment;
 
     if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {

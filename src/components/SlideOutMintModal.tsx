@@ -22,9 +22,6 @@ interface SlideOutMintModalProps {
   transactionHash?: string;
 }
 
-/**
- * PositionInput component for displaying a read-only position input.
- */
 const PositionInput: React.FC<{ label: string; value: number }> = React.memo(({ label, value }) => (
   <div className="flex flex-col">
     <label className="text-sm font-medium text-gray-700 mb-1">
@@ -41,9 +38,6 @@ const PositionInput: React.FC<{ label: string; value: number }> = React.memo(({ 
 
 PositionInput.displayName = 'PositionInput';
 
-/**
- * MessageInput component for entering or displaying a message.
- */
 const MessageInput: React.FC<{ value: string; onChange: (value: string) => void; readOnly: boolean }> = React.memo(({ value, onChange, readOnly }) => (
   <div>
     <label htmlFor="ownerMessage" className="block text-sm font-medium text-gray-700 mb-1">
@@ -64,9 +58,6 @@ const MessageInput: React.FC<{ value: string; onChange: (value: string) => void;
 
 MessageInput.displayName = 'MessageInput';
 
-/**
- * ColorDisplay component for showing the selected color.
- */
 const ColorDisplay: React.FC<{ color: RgbaColor }> = React.memo(({ color }) => (
   <div className="space-y-2">
     <div className="h-8 rounded" style={{ backgroundColor: `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})` }}></div>
@@ -81,9 +72,6 @@ const ColorDisplay: React.FC<{ color: RgbaColor }> = React.memo(({ color }) => (
 
 ColorDisplay.displayName = 'ColorDisplay';
 
-/**
- * SlideOutMintModal component for minting or editing pixels.
- */
 export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
   isOpen,
   onClose,
@@ -101,7 +89,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
   const [showConnectPrompt, setShowConnectPrompt] = useState<boolean>(false);
   const [isMinting, setIsMinting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [modalState, setModalState] = useState<number>(0); // 0: SlideOutMintModal, 1: RainbowModal
+  const [modalState, setModalState] = useState<number>(0);
   const [escapeCounter, setEscapeCounter] = useState<number>(0);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [fallbackEthPrice, setFallbackEthPrice] = useState<bigint | null>(null);
@@ -139,7 +127,7 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
               const data = await response.json();
               const latestPrice = data.prices[data.prices.length - 1][1];
               setDebugInfo(prev => `${prev}, Fallback ETH price: ${latestPrice}`);
-              setFallbackEthPrice(BigInt(Math.round(latestPrice * 100000000))); // Convert to 8 decimal places
+              setFallbackEthPrice(BigInt(Math.round(latestPrice * 100000000)));
             }
           }
         } catch (error) {
@@ -163,7 +151,6 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
         setDebugInfo(prev => `${prev}, ETH price is zero`);
         return null;
       }
-      // USDC has 6 decimals, ETH has 18 decimals, price feed has 8 decimals
       const ethAmount = (usdcPrice * BigInt(1e20)) / ethPrice;
       setDebugInfo(prev => `${prev}, Calculated ETH: ${formatUnits(ethAmount, 18)}`);
       return ethAmount;
@@ -245,7 +232,6 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
       setIsMinting(true);
       try {
         if (isEditing) {
-          // Update existing pixel
           const tokenId = BigInt((x << 16) | y);
           await writeContractAsync({
             address: CONTRACT_ADDRESS,
@@ -261,7 +247,6 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
             ],
           });
         } else {
-          // Mint new pixel
           const messageToSign = encodePacked(
             ['address', 'uint16', 'uint16'],
             [address, x, y]
@@ -303,7 +288,6 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
     }
   }, [chainId, switchChain, signMessageAsync, writeContractAsync, color, x, y, ownerMessage, pixelPriceETH, onClose, onMintSuccess, address, isEditing]);
 
-  // Flag to enable/disable debug info
   const showDebugInfo = false;
 
   const isFetchingPrice = isLoadingUSDC || isLoadingETHPrice;
@@ -318,9 +302,9 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
         ref={modalRef}
         className={`fixed left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto z-[60]`}
         style={{
-          top: 'calc(73px)', // Adjust for header height (73px) and warning div height (44px)
-          bottom: '0', // Adjust for footer height
-          maxHeight: 'calc(100vh - 73px)', // Viewport height minus header, warning div, and footer
+          top: 'calc(73px)',
+          bottom: '0',
+          maxHeight: 'calc(100vh - 73px)',
         }}
       >
         <div className="p-6">
@@ -331,7 +315,8 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
           >
             <div className="p-1.5">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L3.58579 5L0.292893 8.29289C-0.0976311 8.68342 -0.0976311 9.31658 0.292893 9.70711C0.683417 10.0976 1.31658 10.0976 1.70711 9.70711L5 6.41421L8.29289 9.70711C8.68342 10.0976 9.31658 10.0976 9.70711 9.70711C10.0976 9.31658 10.0976 8.68342 9.70711 8.29289L6.41421 5L9.70711 1.70711C10.0976 1.31658 10.0976 0.683417 9.70711 0.292893C9.31658 -0.0976311 8.68342 -0.0976311 8.29289 0.292893L5 3.58579L1.70711 0.292893Z" fill="#6B7280"/>
+                <path d="M1.70711 0.292893C1.31658 -0.0976311 0.683417 -0.0976311 0.292893C-0.0976311 0.683417 -0.0976311 1.31658 0.292893 1.70711L3.58579 5L0.292893 8.29289C-0.0976311 8.68342 -0.0976311 9.31658 0.292893 9.70711C0.683417 10.0976 1.31658 10.0976 1.70711 9.70711L5 6.41421L8.29289 9.70711C8.68342 10.0976 9.31658 10.0976 9.70711 9.70711C10.0976 9.31658 10.0976 8.68342 9.70711 8.29289L6.41421 5L9.70711 1.70711C10.0976 1.31658 10.0976 0.683417 9.70711 0.292
+893C9.31658 -0.0976311 8.68342 -0.0976311 8.29289 0.292893L5 3.58579L1.70711 0.292893Z" fill="#6B7280"/>
               </svg>
             </div>
           </button>
@@ -368,7 +353,11 @@ export const SlideOutMintModal: React.FC<SlideOutMintModalProps> = ({
               ) : (
                 <ColorDisplay color={color} />
               )}
-              <MessageInput value={ownerMessage} onChange={setOwnerMessage} readOnly={!isOwner} />
+              <MessageInput 
+                value={ownerMessage} 
+                onChange={setOwnerMessage} 
+                readOnly={!isOwner && isEditing}
+              />
               {transactionHash && (
                 <div className="mb-4">
                   <a
